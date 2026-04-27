@@ -12,6 +12,9 @@ Real-time chat
 Home Feed Search Posts, people, connections, & more. 
 </pre>
 
+- **API/Backend Flow** <br>
+User => App => Firebase => Database => Response => UI 
+
 -**Tech Stack** <br>
 <pre>
 Flutter (Frontend)
