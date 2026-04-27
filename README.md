@@ -1,30 +1,41 @@
 # Conexus
 <h1>Flutter Project: Social Media App and Communication</h1> 
-- **Overview**
+- **Overview** <br>
 Conexus is a Flutter-based social media application where users can connect, share posts, and interact in real-time.
 
-- **Features**
+- **Features**  <br>
+<pre>
 User authentication (Firebase)
 Create and view posts
 Like and comment system
 Real-time chat
+</pre>
 
--**Tech Stack**
+-**Tech Stack** <br>
+<pre>
 Flutter (Frontend)
 Firebase (Backend)
+</pre>
 
-👥 **Team Members**
+👥 **Team Members** <br>
+<pre>
 Aashish Shrestha
 Ujjwal Aacharya
 Sandesh Sahi
 Sandip Rawal
+</pre>
 
-📂 **Project Structure**
+📂 **Project Structure** <br>
+<pre>
 lib/screens
 lib/widgets
 lib/services
-🔧 **Setup**
+</pre>
+
+🔧 **Setup** <br>
+<pre>
 Clone repo
 Run flutter pub get
 Connect Firebase
 Run project
+</pre>
