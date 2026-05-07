@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
-
-=======
->>>>>>> 2826b703fc03a019fddbac9323b4d749d666f210
 class SendMessage extends StatefulWidget {
   const SendMessage({super.key});
 
@@ -13,7 +9,6 @@ class SendMessage extends StatefulWidget {
 class _SendMessageState extends State<SendMessage> {
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
 
@@ -45,8 +40,5 @@ class _SendMessageState extends State<SendMessage> {
         ),
       ),
     );
-=======
-    return const Placeholder();
->>>>>>> 2826b703fc03a019fddbac9323b4d749d666f210
   }
 }
