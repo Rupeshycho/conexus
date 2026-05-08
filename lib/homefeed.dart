@@ -43,28 +43,25 @@ class _HomeFeedState extends State<HomeFeed> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.grey.shade200,
+
         elevation: 1,
         title: Text(
+
           'Conexus',
           style: TextStyle(
             color: Colors.orange.shade500,
             fontWeight: FontWeight.bold,
           ),
         ),
-        centerTitle: true,
+        // centerTitle: true,
         leading: const CircleAvatar(
           backgroundImage: AssetImage('assets/profile.jpg'),
         ),
         actions: [
+
           IconButton(
-            icon: const Icon(Icons.chat_bubble_outline, color: Colors.orange),
-            onPressed: () {
-              // Open chat screen
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.notifications_none, color: Colors.grey.shade200),
+            icon: Icon(Icons.notifications_none, color: Colors.orange.shade200),
             onPressed: () {
               // Open notifications
             },
