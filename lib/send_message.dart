@@ -10,30 +10,47 @@ class _SendMessageState extends State<SendMessage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-
       appBar: AppBar(
-        backgroundColor: Colors.white24,
-        elevation: 1,
+        backgroundColor: Color(0xFFFFae42),
+        elevation: 2,
 
-        iconTheme: const IconThemeData(
-          color: Colors.white12,
+        centerTitle: false, // title moves to left
+
+        title: const Text("Conexus", style: TextStyle(
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            fontStyle: FontStyle.italic,
+            decoration: TextDecoration.underline,
+            decorationThickness: 1.5, // thickness of underline
+            decorationColor: Colors.white,
+
+        ),
         ),
 
-        title: const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            "Conexus",
-            style: TextStyle(
-              color: Color(0xFFF5B727),
-              fontWeight: FontWeight.bold,
-              fontSize: 26,
+        actions: [
+
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {},
+          ),
+          const SizedBox(width: 10),
+
+          GestureDetector(
+            onTap: (){
+              //required action
+            },
+            child: CircleAvatar(
+              radius:20,
+              backgroundImage: AssetImage("Assets/Image/profile_pic.png"),
             ),
           ),
-        ),
-      ),
+          const SizedBox(width:10),
+        ],
 
-      body: const Center(
+
+      ),
+        body: const Center(
         child: Text(
           "Send Message Screen",
           style: TextStyle(fontSize: 18),
