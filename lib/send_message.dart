@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 class SendMessage extends StatefulWidget {
   const SendMessage({super.key});
@@ -21,23 +23,18 @@ class _SendMessageState extends State<SendMessage> {
             fontSize: 28,
             fontWeight: FontWeight.bold,
             fontStyle: FontStyle.italic,
+            letterSpacing: 1.2,
             decoration: TextDecoration.underline,
-            decorationThickness: 1.5, // thickness of underline
-            decorationColor: Colors.white,
+            decorationThickness: 1, // thickness of underline
+            decorationColor: Colors.black,
 
-        ),
+            ),
         ),
 
         actions: [
 
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
-          const SizedBox(width: 10),
-
           GestureDetector(
-            onTap: (){
+            onTap: (){         //onTap:
               //required action
             },
             child: CircleAvatar(
@@ -50,12 +47,90 @@ class _SendMessageState extends State<SendMessage> {
 
 
       ),
-        body: const Center(
-        child: Text(
-          "Send Message Screen",
-          style: TextStyle(fontSize: 18),
+      body:Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+
+          children:[
+            Text("Messages",style:TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+            letterSpacing: 1,
+          )),
+            SizedBox(height: 10), //height for vertical spacing and width for horizontal spacing
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children:[
+
+                    Card(
+                        color: Colors.white24,
+                        elevation: 10,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child:Column(
+                           children:[
+                             Image.asset(
+                               "Assets/Image/profile_pic.png",
+                               height: 150,
+                               width: 150,
+                               fit: BoxFit.cover,
+                             ),
+
+                              Padding(
+                                  padding: const EdgeInsets.all(12),
+                                    child: Text(
+                                        "Profile",
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                              ),
+
+                           ]
+                        )
+                    ),
+                  SizedBox(width:8),
+                  Card(
+                      color: Colors.white24,
+                      elevation: 10,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child:Column(
+                          children:[
+                            Image.asset(
+                              "Assets/Image/profile_pic.png",
+                              height: 150,
+                              width: 150,
+                              fit: BoxFit.cover,
+                            ),
+
+                            Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Text(
+                                "Profile",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+
+                          ]
+                      )
+                  ),
+                ]
+              ),
+            ),
+
+          ]
         ),
       ),
-    );
+    ) ;
   }
 }
