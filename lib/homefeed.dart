@@ -1,19 +1,11 @@
 import 'package:flutter/material.dart';
 
-void main() => runApp(const ConexusApp());
-
-class ConexusApp extends StatelessWidget {
-  const ConexusApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: const HomeFeed(),
-    );
-  }
+void main(){
+  runApp(const MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: HomeFeed(),
+  ));
 }
-
 class HomeFeed extends StatefulWidget {
   const HomeFeed({super.key});
 
@@ -22,158 +14,247 @@ class HomeFeed extends StatefulWidget {
 }
 
 class _HomeFeedState extends State<HomeFeed> {
-  int _selectedIndex = 0;
 
-  final List<Widget> _pages = const [
-    FeedPage(),
-    Placeholder(), // Explore
-    Placeholder(), // Create
-    Placeholder(), // Chats
-    Placeholder(), // Profile
+  int selectedIndex = 0;
+
+  final List<String> screenNames = [
+    "Home Feed",
+    "Search Users",
+    "Create Reel",
+    "Chats",
+    "Profile",
   ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+
+      // ================= APP BAR =================
       appBar: AppBar(
-        backgroundColor: Colors.grey.shade200,
 
+        backgroundColor: Colors.white,
         elevation: 1,
-        title: Text(
 
-          'Conexus',
-          style: TextStyle(
-            color: Colors.orange.shade500,
-            fontWeight: FontWeight.bold,
+        // LEFT PROFILE ICON
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+
+          child: CircleAvatar(
+            backgroundColor: Colors.orange.shade100,
+
+            child: const Icon(
+              Icons.person,
+              color: Colors.black,
+            ),
           ),
         ),
-        // centerTitle: true,
-        leading: const CircleAvatar(
-          backgroundImage: AssetImage('assets/profile.jpg'),
+
+        // CENTER LOGO/TEXT
+        title: const Text(
+          "Conexus",
+          style: TextStyle(
+            color: Colors.orange,
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
         ),
+
+        centerTitle: true,
+
+        // RIGHT NOTIFICATION ICON
         actions: [
 
           IconButton(
-            icon: Icon(Icons.notifications_none, color: Colors.orange.shade200),
-            onPressed: () {
-              // Open notifications
-            },
-          ),
-        ],
-      ),
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: Colors.deepOrange,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Explore'),
-          BottomNavigationBarItem(icon: Icon(Icons.add_box_outlined), label: 'Create'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble), label: 'Chats'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
-      ),
-    );
-  }
-}
+            onPressed: () {},
 
-class FeedPage extends StatelessWidget {
-  const FeedPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(8),
-      children: const [
-        PostWidget(
-          username: 'martha_',
-          location: 'Golden Bay, San Francisco',
-          imageUrl: 'assets/post1.jpg',
-          caption: 'Golden hours by the shore hit differently...',
-          likes: 1284,
-          comments: 42,
-        ),
-        PostWidget(
-          username: 'jack_v',
-          location: 'Modern Museum',
-          imageUrl: 'assets/post2.jpg',
-          caption: 'Perspective is everything...',
-          likes: 856,
-          comments: 12,
-        ),
-        PostWidget(
-          username: 'sara.design',
-          location: 'Design Studio',
-          imageUrl: 'assets/post3.jpg',
-          caption: 'Monday morning essentials...',
-          likes: 2410,
-          comments: 150,
-        ),
-      ],
-    );
-  }
-}
-
-class PostWidget extends StatelessWidget {
-  final String username, location, imageUrl, caption;
-  final int likes, comments;
-
-  const PostWidget({
-    super.key,
-    required this.username,
-    required this.location,
-    required this.imageUrl,
-    required this.caption,
-    required this.likes,
-    required this.comments,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            leading: const CircleAvatar(
-              backgroundImage: AssetImage('assets/profile.jpg'),
+            icon: const Icon(
+              Icons.notifications_none,
+              color: Colors.orange,
+              size: 30,
             ),
-            title: Text(username, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(location),
-            trailing: const Icon(Icons.more_vert),
           ),
-          Image.asset(imageUrl, fit: BoxFit.cover),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(caption),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Row(
+        ],
+      ),
+
+      // ================= BODY =================
+      body: Container(
+
+        width: double.infinity,
+        color: const Color(0xfff8f3f3),
+
+        child: Center(
+
+          child: Container(
+
+            height: 200,
+            width: 300,
+
+            padding: const EdgeInsets.all(20),
+
+            decoration: BoxDecoration(
+              color: Colors.white,
+
+              borderRadius: BorderRadius.circular(12),
+
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.shade300,
+                  blurRadius: 5,
+                ),
+              ],
+            ),
+
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+
               children: [
-                const Icon(Icons.favorite_border),
-                const SizedBox(width: 4),
-                Text('$likes'),
-                const SizedBox(width: 16),
-                const Icon(Icons.comment_outlined),
-                const SizedBox(width: 4),
-                Text('$comments'),
+
+                Text(
+                  screenNames[selectedIndex],
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 15),
+
+                const Text(
+                  "Content will appear here",
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey,
+                  ),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
+        ),
+      ),
+
+      // ================= FLOATING + BUTTON =================
+      floatingActionButton: FloatingActionButton(
+
+        backgroundColor: Colors.deepOrange,
+
+        onPressed: () {
+
+          setState(() {
+            selectedIndex = 5;
+          });
+
+        },
+
+        child: const Icon(
+          Icons.add,
+          size: 35,
+          color: Colors.white,
+        ),
+      ),
+
+      floatingActionButtonLocation:
+      FloatingActionButtonLocation.endFloat,
+
+      // ================= BOTTOM NAVIGATION =================
+      bottomNavigationBar: BottomAppBar(
+
+        shape: const CircularNotchedRectangle(),
+
+        notchMargin: 1,
+
+        child: SizedBox(
+
+          height: 65,
+
+          child: Row(
+
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+
+            children: [
+
+              // HOME
+              navItem(
+                icon: Icons.home,
+                label: "HOME",
+                index: 0,
+              ),
+
+              // SEARCH
+              navItem(
+                icon: Icons.search,
+                label: "SEARCH",
+                index: 1,
+              ),
+              navItem(
+                  icon: Icons.video_collection,
+                  label: "REELS",
+                  index: 2,
+              ),
+
+
+              // EMPTY SPACE FOR FAB
+              // const SizedBox(width: 40),
+
+              // CHATS
+              navItem(
+                icon: Icons.chat_bubble_outline,
+                label: "CHATS",
+                index: 3,
+              ),
+
+              // PROFILE
+              navItem(
+                icon: Icons.person_outline,
+                label: "PROFILE",
+                index: 4,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ================= NAV ITEM WIDGET =================
+  Widget navItem({
+    required IconData icon,
+    required String label,
+    required int index,
+  }) {
+
+    bool isSelected = selectedIndex == index;
+
+    return GestureDetector(
+
+      onTap: () {
+
+        setState(() {
+          selectedIndex = index;
+        });
+
+      },
+
+      child: Column(
+
+        mainAxisAlignment: MainAxisAlignment.center,
+
+        children: [
+
+          Icon(
+            icon,
+            color: isSelected ? Colors.orange : Colors.grey,
+          ),
+
+          Text(
+            label,
+
+            style: TextStyle(
+              color: isSelected ? Colors.orange : Colors.grey,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
