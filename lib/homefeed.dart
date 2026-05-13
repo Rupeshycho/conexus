@@ -20,9 +20,10 @@ class _HomeFeedState extends State<HomeFeed> {
   final List<String> screenNames = [
     "Home Feed",
     "Search Users",
-    "Create Reel",
+    "View Reels",
     "Chats",
     "Profile",
+    "Add Posts/Reels"
   ];
 
   @override
@@ -30,13 +31,14 @@ class _HomeFeedState extends State<HomeFeed> {
 
     return Scaffold(
 
-      // ================= APP BAR =================
+      // app bar
       appBar: AppBar(
 
         backgroundColor: Colors.white,
         elevation: 1,
 
-        // LEFT PROFILE ICON
+
+
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
 
@@ -50,7 +52,8 @@ class _HomeFeedState extends State<HomeFeed> {
           ),
         ),
 
-        // CENTER LOGO/TEXT
+
+
         title: const Text(
           "Conexus",
           style: TextStyle(
@@ -62,7 +65,8 @@ class _HomeFeedState extends State<HomeFeed> {
 
         centerTitle: true,
 
-        // RIGHT NOTIFICATION ICON
+
+
         actions: [
 
           IconButton(
@@ -77,7 +81,7 @@ class _HomeFeedState extends State<HomeFeed> {
         ],
       ),
 
-      // ================= BODY =================
+
       body: Container(
 
         width: double.infinity,
