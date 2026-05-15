@@ -18,11 +18,11 @@ class _HomeFeedState extends State<HomeFeed> {
   int selectedIndex = 0;
 
   final List<String> screenNames = [
-    "Home Feed",
+    "Home Feed  asd",
     "Search Users",
     "View Reels",
     "Chats",
-    "Profile",
+
     "Add Posts/Reels"
   ];
 
@@ -70,7 +70,9 @@ class _HomeFeedState extends State<HomeFeed> {
         actions: [
 
           IconButton(
-            onPressed: () {},
+            onPressed: ( ) {
+
+            },
 
             icon: const Icon(
               Icons.notifications_none,
@@ -158,14 +160,14 @@ class _HomeFeedState extends State<HomeFeed> {
       ),
 
       floatingActionButtonLocation:
-      FloatingActionButtonLocation.endFloat,
+      FloatingActionButtonLocation.centerDocked,
 
       // ================= BOTTOM NAVIGATION =================
       bottomNavigationBar: BottomAppBar(
 
         shape: const CircularNotchedRectangle(),
 
-        notchMargin: 1,
+        notchMargin: 2,
 
         child: SizedBox(
 
@@ -189,7 +191,10 @@ class _HomeFeedState extends State<HomeFeed> {
                 icon: Icons.search,
                 label: "SEARCH",
                 index: 1,
+
               ),
+
+
               navItem(
                   icon: Icons.video_collection,
                   label: "REELS",
@@ -208,11 +213,11 @@ class _HomeFeedState extends State<HomeFeed> {
               ),
 
               // PROFILE
-              navItem(
-                icon: Icons.person_outline,
-                label: "PROFILE",
-                index: 4,
-              ),
+              // navItem(
+              //   icon: Icons.add_a_photo,
+              //   label: "PROFILE",
+              //   index: 4,
+              // ),
             ],
           ),
         ),
@@ -233,6 +238,7 @@ class _HomeFeedState extends State<HomeFeed> {
 
       onTap: () {
 
+
         setState(() {
           selectedIndex = index;
         });
@@ -248,6 +254,7 @@ class _HomeFeedState extends State<HomeFeed> {
           Icon(
             icon,
             color: isSelected ? Colors.orange : Colors.grey,
+
           ),
 
           Text(
