@@ -1,11 +1,13 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 class CreateTextPostScreen extends StatefulWidget {
-  final Function(String userName, String caption)? onPostCreated;
+  final Function(String caption, File? imageFile)
+  onPostCreated; // fixed signature
 
-  const CreateTextPostScreen({super.key, this.onPostCreated});
+  const CreateTextPostScreen({super.key, required this.onPostCreated});
 
   @override
   State<CreateTextPostScreen> createState() => _CreateTextPostScreenState();
@@ -35,24 +37,17 @@ class _CreateTextPostScreenState extends State<CreateTextPostScreen> {
   void _sharePost() {
     final caption = _captionController.text.trim();
     if (caption.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please write something!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please write something!')));
       return;
     }
-
-    widget.onPostCreated?.call('', caption);
-
+    widget.onPostCreated(caption, _coverImage);
     _captionController.clear();
     setState(() {
       _coverImage = null;
       _isCrossPostEnabled = false;
     });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Post shared!')),
-    );
-    Navigator.pop(context);
   }
 
   @override
@@ -103,40 +98,37 @@ class _CreateTextPostScreenState extends State<CreateTextPostScreen> {
                 ),
                 child: _coverImage == null
                     ? Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.cloud_upload_outlined,
-                      size: 44,
-                      color: Colors.grey.shade600,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tap to upload cover',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                )
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.cloud_upload_outlined,
+                            size: 44,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tap to upload cover',
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                        ],
+                      )
                     : ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.file(_coverImage!, fit: BoxFit.cover),
-                      Container(color: Colors.black26),
-                      const Center(
-                        child: Icon(
-                          Icons.camera_alt,
-                          color: Colors.white,
-                          size: 40,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.file(_coverImage!, fit: BoxFit.cover),
+                            Container(color: Colors.black26),
+                            const Center(
+                              child: Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                                size: 40,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -153,41 +145,35 @@ class _CreateTextPostScreenState extends State<CreateTextPostScreen> {
             _buildOptionTile(
               icon: Icons.location_on_outlined,
               label: 'Add Location',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Location picker coming soon')),
-                );
-              },
+              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Location picker coming soon')),
+              ),
             ),
             const SizedBox(height: 8),
             _buildOptionTile(
               icon: Icons.people_alt_outlined,
               label: 'Tag Friends',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Tag friends feature coming soon')),
-                );
-              },
+              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Tag friends feature coming soon'),
+                ),
+              ),
             ),
             const SizedBox(height: 8),
             _buildOptionTile(
               icon: Icons.music_note,
               label: 'Add Music',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Music picker coming soon')),
-                );
-              },
+              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Music picker coming soon')),
+              ),
             ),
             const SizedBox(height: 8),
             _buildOptionTile(
               icon: Icons.public,
               label: 'Audience: Everyone',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Audience settings coming soon')),
-                );
-              },
+              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Audience settings coming soon')),
+              ),
             ),
             const SizedBox(height: 24),
             const Divider(),
@@ -195,11 +181,8 @@ class _CreateTextPostScreenState extends State<CreateTextPostScreen> {
               title: const Text('Cross-post to Instagram'),
               subtitle: const Text('Share automatically'),
               value: _isCrossPostEnabled,
-              onChanged: (bool value) {
-                setState(() {
-                  _isCrossPostEnabled = value;
-                });
-              },
+              onChanged: (bool value) =>
+                  setState(() => _isCrossPostEnabled = value),
               secondary: const Icon(Icons.camera_alt),
             ),
           ],
