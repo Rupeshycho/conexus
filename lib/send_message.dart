@@ -6,8 +6,47 @@ class MessageFrame extends StatefulWidget {
   @override
   State<MessageFrame> createState() => _MessageFrameState();
 }
-
 class _MessageFrameState extends State<MessageFrame> {
+
+  // dummy data
+  final List<Map<String, dynamic>> chats = [
+    {
+      "name": "Aarav",
+      "message": "Hey, how are you?",
+      "time": "2:30 PM",
+      "image":
+      "https://i.pravatar.cc/150?img=1",
+    },
+    {
+      "name": "hari",
+      "message": "Let's meet tomorrow.",
+      "time": "1:10 PM",
+      "image":
+      "https://i.pravatar.cc/150?img=2",
+    },
+    {
+      "name": "daku",
+      "message": "I sent the files.",
+      "time": "Yesterday",
+      "image":
+      "https://i.pravatar.cc/150?img=3",
+    },
+    {
+      "name": "sita",
+      "message": "free vayexi message gara",
+      "time": "Yesterday",
+      "image":
+      "https://i.pravatar.cc/150?img=4",
+    },
+    {
+      "name": "shyam",
+      "message": "Okay dxt",
+      "time": "Monday",
+      "image":
+      "https://i.pravatar.cc/150?img=5",
+    },
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
