@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -19,12 +20,13 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Animation
+    // Animation Controller
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     );
 
+    // Animation Effect
     _animation = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeInOut,
@@ -32,14 +34,13 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Navigate after 3 seconds
+    // Navigate to Login Screen
     Timer(const Duration(seconds: 3), () {
 
-      // CHANGE THIS SCREEN
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const HomeScreen(),
+          builder: (context) => LoginScreen(),
         ),
       );
 
@@ -80,6 +81,7 @@ class _SplashScreenState extends State<SplashScreen>
             // LOGO
             ScaleTransition(
               scale: _animation,
+
               child: Container(
                 height: 150,
                 width: 150,
@@ -96,17 +98,18 @@ class _SplashScreenState extends State<SplashScreen>
 
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.orange.withOpacity(0.5),
+                      color: Colors.orange,
                       blurRadius: 40,
-                      spreadRadius: 5,
+                      spreadRadius: 2,
                     ),
                   ],
                 ),
 
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(40),
+
                   child: Image.asset(
-                   "assets/images/img.png",
+                    "assets/images/Conexus.logo.png",
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -170,47 +173,13 @@ class _SplashScreenState extends State<SplashScreen>
             const SizedBox(
               height: 30,
               width: 30,
+
               child: CircularProgressIndicator(
                 color: Color(0xffff7b54),
                 strokeWidth: 3,
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-
-
-
-
-
-// DEMO HOME SCREEN
-// Replace with your LoginScreen()
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: const Text("Conexus"),
-      ),
-
-      body: const Center(
-        child: Text(
-          "Home Screen",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 25,
-          ),
         ),
       ),
     );
