@@ -32,15 +32,15 @@ class _MessageFrameState extends State<MessageFrame> {
       "https://i.pravatar.cc/150?img=3",
     },
     {
-      "name": "sita",
-      "message": "free vayexi message gara",
+      "name": "joe",
+      "message": "are you ok ?",
       "time": "Yesterday",
       "image":
       "https://i.pravatar.cc/150?img=4",
     },
     {
-      "name": "shyam",
-      "message": "Okay dxt",
+      "name": "julia",
+      "message": "if you are free,message me !",
       "time": "Monday",
       "image":
       "https://i.pravatar.cc/150?img=5",
@@ -142,6 +142,100 @@ class _MessageFrameState extends State<MessageFrame> {
                   ),
                 ),
               ),
+            ),
+          ),
+
+          // Chat_cards
+          Expanded(
+            child: ListView.builder(
+              itemCount: chats.length,
+
+              itemBuilder: (context, index) {
+
+                final chat = chats[index];
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+
+                    child: Row(
+                      children: [
+
+                        // Profile Image
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundImage:
+                          NetworkImage(chat["image"]),
+                        ),
+
+                        const SizedBox(width: 14),
+
+                        // Name & Message
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                            CrossAxisAlignment.start,
+
+                            children: [
+
+                              Text(
+                                chat["name"],
+
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black,
+                                ),
+                              ),
+
+                              const SizedBox(height: 5),
+
+                              Text(
+                                chat["message"],
+
+                                overflow: TextOverflow.ellipsis,
+
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Time
+                        Text(
+                          chat["time"],
+
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
