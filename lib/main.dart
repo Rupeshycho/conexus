@@ -12,13 +12,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-
       title: 'Conexus',
-
       theme: ThemeData(
         primarySwatch: Colors.deepOrange,
       ),
-
       home: const CreateProfile(),
     );
   }

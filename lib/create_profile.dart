@@ -1,276 +1,338 @@
 import 'package:flutter/material.dart';
+import 'edit_profile.dart';
 
-class CreateProfile extends StatelessWidget {
+class CreateProfile extends StatefulWidget {
   const CreateProfile({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F4F4),
+  State<CreateProfile> createState() => _CreateProfileState();
+}
 
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          "Conexus",
-          style: TextStyle(
-            color: Colors.deepOrange,
-            fontWeight: FontWeight.bold,
-          ),
+class _CreateProfileState extends State<CreateProfile> {
+  String name = "Sandip Rawal";
+  String username = "@creative_sandip";
+
+  String bio =
+      "Visual Storyteller & Motion Designer.\n"
+      "Creating digital experiences that pulse with energy.";
+
+  Future<void> openEditProfile() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditProfile(
+          currentName: name,
+          currentUsername: username,
+          currentBio: bio,
         ),
-        leading: const Icon(Icons.menu, color: Colors.grey),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 15),
-            child: Icon(
-              Icons.chat_bubble_outline,
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        name = result["name"];
+        username = result["username"];
+        bio = result["bio"];
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF7F4F4),
+
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+
+          title: const Text(
+            "Conexus",
+            style: TextStyle(
               color: Colors.deepOrange,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ],
-      ),
 
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 10),
+          leading: const Icon(
+            Icons.menu,
+            color: Colors.grey,
+          ),
 
-            // Cover Section
+          actions: const [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: Stack(
-                alignment: Alignment.bottomCenter,
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    height: 160,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(25),
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.orange.shade300,
-                          Colors.deepOrange,
-                        ],
+              padding: EdgeInsets.only(right: 15),
+              child: Icon(
+                Icons.chat_bubble_outline,
+                color: Colors.deepOrange,
+              ),
+            ),
+          ],
+        ),
+
+        body: SingleChildScrollView(
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+
+              Padding(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 18),
+
+                child: Stack(
+                  alignment: Alignment.bottomCenter,
+                  clipBehavior: Clip.none,
+
+                  children: [
+                    Container(
+                      height: 180,
+
+                      decoration: BoxDecoration(
+                        borderRadius:
+                        BorderRadius.circular(28),
+
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.orange.shade300,
+                            Colors.deepOrange,
+                          ],
+                        ),
                       ),
                     ),
 
-                    // ADD COVER IMAGE LATER
-                    child: const Center(
-                      child: Text(
-                        "Cover Image",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                    Positioned(
+                      bottom: -55,
+
+                      child: CircleAvatar(
+                        radius: 58,
+                        backgroundColor: Colors.white,
+
+                        child: CircleAvatar(
+                          radius: 54,
+                          backgroundColor:
+                          Colors.orange.shade100,
+
+                          child: const Icon(
+                            Icons.person,
+                            size: 60,
+                            color: Colors.deepOrange,
+                          ),
                         ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 70),
+
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 5),
+
+              Text(
+                username,
+                style: const TextStyle(
+                  color: Colors.deepOrange,
+                  fontSize: 16,
+                ),
+              ),
+
+              const SizedBox(height: 25),
+
+              Row(
+                mainAxisAlignment:
+                MainAxisAlignment.spaceEvenly,
+
+                children: [
+                  buildStat("142", "Posts"),
+                  buildStat("12.8k", "Followers"),
+                  buildStat("482", "Following"),
+                ],
+              ),
+
+              const SizedBox(height: 30),
+
+              Padding(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 30),
+
+                child: Text(
+                  bio,
+                  textAlign: TextAlign.center,
+
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              Row(
+                mainAxisAlignment:
+                MainAxisAlignment.center,
+
+                children: [
+                  ElevatedButton(
+                    onPressed: openEditProfile,
+
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                      Colors.deepOrange,
+
+                      padding:
+                      const EdgeInsets.symmetric(
+                        horizontal: 35,
+                        vertical: 15,
+                      ),
+
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                        BorderRadius.circular(30),
+                      ),
+                    ),
+
+                    child: const Text(
+                      "Edit Profile",
+                      style: TextStyle(
+                        color: Colors.white,
                       ),
                     ),
                   ),
 
-                  // Profile Image
-                  Positioned(
-                    bottom: -50,
-                    child: Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 52,
-                          backgroundColor: Colors.white,
-                          child: CircleAvatar(
-                            radius: 48,
-                            backgroundColor: Colors.grey.shade300,
+                  const SizedBox(width: 15),
 
-                            // ADD PROFILE IMAGE LATER
-                            child: const Icon(
-                              Icons.person,
-                              size: 50,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                  OutlinedButton(
+                    onPressed: () {},
 
-                        Positioned(
-                          right: 0,
-                          bottom: 5,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.deepOrange,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 3,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.edit,
-                              size: 18,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
+                    style: OutlinedButton.styleFrom(
+                      padding:
+                      const EdgeInsets.symmetric(
+                        horizontal: 35,
+                        vertical: 15,
+                      ),
+
+                      side: const BorderSide(
+                        color: Colors.deepOrange,
+                      ),
+
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                        BorderRadius.circular(30),
+                      ),
+                    ),
+
+                    child: const Text(
+                      "Share",
+                      style: TextStyle(
+                        color: Colors.deepOrange,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
 
-            const SizedBox(height: 60),
+              const SizedBox(height: 30),
 
-            // Name
-            const Text(
-              "Sandip Rawal",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+              const TabBar(
+                labelColor: Colors.deepOrange,
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: Colors.deepOrange,
+
+                tabs: [
+                  Tab(icon: Icon(Icons.grid_on)),
+                  Tab(icon: Icon(Icons.video_collection)),
+                  Tab(icon: Icon(Icons.person_pin)),
+                ],
               ),
-            ),
 
-            const SizedBox(height: 5),
+              SizedBox(
+                height: 500,
 
-            const Text(
-              "@creative_sandip",
-              style: TextStyle(
-                color: Colors.deepOrange,
-                fontSize: 16,
-              ),
-            ),
-
-            const SizedBox(height: 25),
-
-            // Stats
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                buildStatCard("12.8k", "Followers"),
-                const SizedBox(width: 10),
-                buildStatCard("482", "Following"),
-              ],
-            ),
-
-            const SizedBox(height: 10),
-
-            buildStatCard("142", "Posts"),
-
-            const SizedBox(height: 30),
-
-            // Bio
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 35),
-              child: Text(
-                "Visual Storyteller & Motion Designer.\n"
-                    "Creating digital experiences that pulse\n"
-                    "with energy.\n"
-                    "📍 Based in Neo-Tokyo / Berlin",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                  height: 1.5,
+                child: TabBarView(
+                  children: [
+                    buildGrid(),
+                    buildGrid(),
+                    buildGrid(),
+                  ],
                 ),
               ),
-            ),
-
-            const SizedBox(height: 35),
-
-            // Buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepOrange,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 40,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    elevation: 5,
-                  ),
-                  child: const Text(
-                    "Follow",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 20),
-
-                OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 40,
-                      vertical: 14,
-                    ),
-                    side: const BorderSide(
-                      color: Colors.deepOrange,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: const Text(
-                    "Chat",
-                    style: TextStyle(
-                      color: Colors.deepOrange,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget buildStatCard(String number, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 24,
-        vertical: 15,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+  Widget buildStat(String number, String label) {
+    return Column(
+      children: [
+        Text(
+          number,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.deepOrange,
           ),
-        ],
+        ),
+
+        const SizedBox(height: 5),
+
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black54,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildGrid() {
+    return GridView.builder(
+      padding: const EdgeInsets.all(15),
+
+      itemCount: 12,
+
+      gridDelegate:
+      const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
       ),
-      child: Row(
-        children: [
-          Text(
-            number,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.deepOrange,
+
+      itemBuilder: (context, index) {
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+
+            gradient: LinearGradient(
+              colors: [
+                Colors.orange.shade200,
+                Colors.deepOrange.shade300,
+              ],
             ),
           ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.black54,
-              fontSize: 16,
-            ),
+
+          child: const Icon(
+            Icons.image,
+            color: Colors.white,
+            size: 35,
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
