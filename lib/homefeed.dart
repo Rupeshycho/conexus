@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 
 void main(){
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: HomeFeed(),
-  ));
+  runApp(const HomeFeed());
 }
+
 class HomeFeed extends StatefulWidget {
   const HomeFeed({super.key});
 
@@ -18,11 +16,10 @@ class _HomeFeedState extends State<HomeFeed> {
   int selectedIndex = 0;
 
   final List<String> screenNames = [
-    "Home Feed  asd",
+    "Home Feed ",
     "Search Users",
     "View Reels",
     "Chats",
-
     "Add Posts/Reels"
   ];
 
@@ -139,30 +136,10 @@ class _HomeFeedState extends State<HomeFeed> {
         ),
       ),
 
-      // ================= FLOATING + BUTTON =================
-      floatingActionButton: FloatingActionButton(
+      //Floating Action button center
 
-        backgroundColor: Colors.deepOrange,
 
-        onPressed: () {
-
-          setState(() {
-            selectedIndex = 5;
-          });
-
-        },
-
-        child: const Icon(
-          Icons.add,
-          size: 35,
-          color: Colors.white,
-        ),
-      ),
-
-      floatingActionButtonLocation:
-      FloatingActionButtonLocation.centerDocked,
-
-      // ================= BOTTOM NAVIGATION =================
+      // Bottom Navigation
       bottomNavigationBar: BottomAppBar(
 
         shape: const CircularNotchedRectangle(),
@@ -174,52 +151,20 @@ class _HomeFeedState extends State<HomeFeed> {
           height: 65,
 
           child: Row(
-
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-
             children: [
+              navItem(icon: Icons.home, label: "HOME", index: 0),
 
-              // HOME
-              navItem(
-                icon: Icons.home,
-                label: "HOME",
-                index: 0,
-              ),
+              navItem(icon: Icons.search, label: "SEARCH", index: 1),
 
-              // SEARCH
-              navItem(
-                icon: Icons.search,
-                label: "SEARCH",
-                index: 1,
+              navItem(icon: Icons.add_box_outlined, label: "CREATE", index: 2),
 
-              ),
+              navItem(icon: Icons.video_collection, label: "REELS", index: 3),
 
-
-              navItem(
-                  icon: Icons.video_collection,
-                  label: "REELS",
-                  index: 2,
-              ),
-
-
-              // EMPTY SPACE FOR FAB
-              // const SizedBox(width: 40),
-
-              // CHATS
-              navItem(
-                icon: Icons.chat_bubble_outline,
-                label: "CHATS",
-                index: 3,
-              ),
-
-              // PROFILE
-              // navItem(
-              //   icon: Icons.add_a_photo,
-              //   label: "PROFILE",
-              //   index: 4,
-              // ),
+              navItem(icon: Icons.chat_bubble_outline, label: "CHATS", index: 4),
             ],
           ),
+
         ),
       ),
     );
