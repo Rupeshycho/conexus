@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 
-void main(){
-  runApp(const HomeFeed());
-}
 
 class HomeFeed extends StatefulWidget {
   const HomeFeed({super.key});
@@ -18,9 +15,10 @@ class _HomeFeedState extends State<HomeFeed> {
   final List<String> screenNames = [
     "Home Feed ",
     "Search Users",
+    "Add Posts/Reels",
     "View Reels",
     "Chats",
-    "Add Posts/Reels"
+
   ];
 
   @override
@@ -80,67 +78,24 @@ class _HomeFeedState extends State<HomeFeed> {
         ],
       ),
 
-
-      body: Container(
-
-        width: double.infinity,
-        color: const Color(0xfff8f3f3),
-
-        child: Center(
-
-          child: Container(
-
-            height: 200,
-            width: 300,
-
-            padding: const EdgeInsets.all(20),
-
-            decoration: BoxDecoration(
-              color: Colors.white,
-
-              borderRadius: BorderRadius.circular(12),
-
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.shade300,
-                  blurRadius: 5,
-                ),
-              ],
-            ),
-
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-
-              children: [
-
-                Text(
-                  screenNames[selectedIndex],
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 15),
-
-                const Text(
-                  "Content will appear here",
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      body: IndexedStack(
+        index: selectedIndex,
+        children: [
+          Center(child: Text(screenNames[0])),
+          Center(child: Text(screenNames[1])),
+          Center(child: Text(screenNames[2])),
+          Center(child: Text(screenNames[3])),
+          Center(child: Text(screenNames[4])),
+        ],
       ),
+
 
       //Floating Action button center
 
 
       // Bottom Navigation
       bottomNavigationBar: BottomAppBar(
+
 
         shape: const CircularNotchedRectangle(),
 
@@ -152,6 +107,7 @@ class _HomeFeedState extends State<HomeFeed> {
 
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
+
             children: [
               navItem(icon: Icons.home, label: "HOME", index: 0),
 
