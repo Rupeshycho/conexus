@@ -1,184 +1,7 @@
 import 'package:flutter/material.dart';
-
-class ChatTile extends StatelessWidget {
-
-  final String username;
-  final String profileImage;
-  final String lastMessage;
-  final String time;
-  final String unreadCount;
-  final bool isOnline;
-
-  const ChatTile({
-    super.key,
-    required this.username,
-    required this.profileImage,
-    required this.lastMessage,
-    required this.time,
-    required this.unreadCount,
-    required this.isOnline,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-
-    return InkWell(
-
-      onTap: () {
-
-        Navigator.push(
-          context,
-
-          MaterialPageRoute(
-            builder: (context) => ChatScreen(
-
-              username: username,
-
-              profileImage: profileImage,
-            ),
-          ),
-        );
-      },
-
-      child: Container(
-
-        margin: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 7,
-        ),
-
-        padding: const EdgeInsets.all(14),
-
-        decoration: BoxDecoration(
-
-          color: Colors.white,
-
-          borderRadius:
-          BorderRadius.circular(18),
-        ),
-
-        child: Row(
-          children: [
-
-            Stack(
-              children: [
-
-                CircleAvatar(
-                  radius: 28,
-
-                  backgroundImage:
-                  NetworkImage(profileImage),
-                ),
-
-                if (isOnline)
-                  Positioned(
-                    bottom: 2,
-                    right: 2,
-
-                    child: Container(
-
-                      height: 14,
-                      width: 14,
-
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-
-            const SizedBox(width: 14),
-
-            Expanded(
-              child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
-
-                children: [
-
-                  Text(
-                    username,
-
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  Text(
-                    lastMessage,
-
-                    overflow:
-                    TextOverflow.ellipsis,
-
-                    style: TextStyle(
-                      color:
-                      Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            Column(
-              children: [
-
-                Text(
-                  time,
-
-                  style: TextStyle(
-                    fontSize: 12,
-                    color:
-                    Colors.grey.shade500,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                if (unreadCount != "0")
-                  Container(
-
-                    padding:
-                    const EdgeInsets.all(7),
-
-                    decoration:
-                    const BoxDecoration(
-                      color: Colors.orange,
-                      shape: BoxShape.circle,
-                    ),
-
-                    child: Text(
-                      unreadCount,
-
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// CHAT SCREEN
-
+import 'video_call_screen.dart';
 
 class ChatScreen extends StatefulWidget {
-
   final String username;
   final String profileImage;
 
@@ -189,25 +12,45 @@ class ChatScreen extends StatefulWidget {
   });
 
   @override
-  State<ChatScreen> createState() =>
-      _ChatScreenState();
+  State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState
-    extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> {
 
-  final TextEditingController
-  messageController =
+  final TextEditingController messageController =
   TextEditingController();
 
-  final List<Map<String, dynamic>>
-  messages = [];
+  final ScrollController scrollController =
+  ScrollController();
+
+  // DUMMY CHAT DATA
+
+  final List<Map<String, dynamic>> messages = [
+
+    {
+      "text": "Hello 👋",
+      "isMe": false,
+      "time": "10:20 AM",
+    },
+
+    {
+      "text": "Hi bro!",
+      "isMe": true,
+      "time": "10:21 AM",
+    },
+
+    {
+      "text": "How are you?",
+      "isMe": false,
+      "time": "10:22 AM",
+    },
+  ];
+
+  // SEND MESSAGE
 
   void sendMessage() {
 
-    if (messageController.text
-        .trim()
-        .isEmpty) {
+    if (messageController.text.trim().isEmpty) {
       return;
     }
 
@@ -215,32 +58,83 @@ class _ChatScreenState
 
       messages.add({
 
-        "text":
-        messageController.text.trim(),
+        "text": messageController.text.trim(),
 
         "isMe": true,
+
+        "time": TimeOfDay.now().format(context),
       });
     });
 
     messageController.clear();
+
+    // AUTO SCROLL
+
+    Future.delayed(
+      const Duration(milliseconds: 100), () {
+        if (scrollController.hasClients) {
+          scrollController.animateTo(
+            scrollController.position.maxScrollExtent,
+
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      },
+    );
+  }
+
+  // AUDIO CALL
+
+  void startAudioCall() {
+
+    ScaffoldMessenger.of(context).showSnackBar(
+
+      const SnackBar(
+        content: Text("Audio Call Coming Soon 📞"),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    messageController.dispose();
+    scrollController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F6FA),
 
-      backgroundColor:
-      const Color(0xFFF4F6FA),
+      // APP BAR
 
       appBar: AppBar(
 
         backgroundColor: Colors.white,
 
+        elevation: 0,
+
+        leading: IconButton(
+
+          onPressed: () {
+            Navigator.pop(context);
+          },
+
+          icon: const Icon(
+            Icons.arrow_back_ios,
+            color: Colors.black,
+          ),
+        ),
+
         title: Row(
           children: [
 
             CircleAvatar(
+              radius: 20,
+
               backgroundImage:
               NetworkImage(
                 widget.profileImage,
@@ -249,100 +143,193 @@ class _ChatScreenState
 
             const SizedBox(width: 10),
 
-            Text(
-              widget.username,
+            Column(
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
 
-              style: const TextStyle(
-                color: Colors.black,
-              ),
+              children: [
+
+                Text(
+                  widget.username,
+
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 2),
+
+                const Text(
+                  "Online",
+
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
+
+        actions: [
+
+          // VIDEO CALL
+
+          IconButton(
+
+            icon: const Icon(
+              Icons.videocam,
+              color: Colors.black,
+            ),
+
+            onPressed: () {
+              Navigator.push(context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      VideoCallScreen(
+
+                        username:
+                        widget.username,
+                      ),
+                ),
+              );
+            },
+          ),
+
+          // AUDIO CALL
+
+          IconButton(
+
+            icon: const Icon(
+              Icons.call,
+              color: Colors.black,
+            ),
+
+            onPressed: startAudioCall,
+          ),
+
+          const SizedBox(width: 5),
+        ],
       ),
+
+      // BODY
 
       body: Column(
         children: [
 
+          // MESSAGE LIST
+
           Expanded(
+
             child: ListView.builder(
 
-              padding:
-              const EdgeInsets.all(16),
+              controller: scrollController,
 
-              itemCount:
-              messages.length,
+              padding: const EdgeInsets.all(16),
 
-              itemBuilder:
-                  (context, index) {
+              itemCount: messages.length,
 
-                final message =
-                messages[index];
+              itemBuilder: (context, index) {
 
-                final bool isMe =
-                message["isMe"];
+                final msg = messages[index];
 
+                final bool isMe = msg["isMe"];
                 return Align(
 
                   alignment: isMe
                       ? Alignment.centerRight
                       : Alignment.centerLeft,
 
-                  child: Container(
+                  child: Column(
+                    crossAxisAlignment: isMe
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
 
-                    margin:
-                    const EdgeInsets.only(
-                      bottom: 12,
-                    ),
+                    children: [
 
-                    padding:
-                    const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
+                      Container(
 
-                    decoration: BoxDecoration(
+                        margin: const EdgeInsets.only(bottom: 4,),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
 
-                      color: isMe
-                          ? Colors.orange
-                          : Colors.white,
+                        constraints:
+                        const BoxConstraints(maxWidth: 280,),
+                        decoration: BoxDecoration(
+                          color: isMe
+                              ? Colors.orange
+                              : Colors.white,
 
-                      borderRadius:
-                      BorderRadius.circular(
-                        18,
+                          borderRadius: BorderRadius.circular(18,),
+                        ),
+
+                        child: Text(msg["text"],
+                          style: TextStyle(
+                            color:
+                            isMe
+                                ? Colors.white
+                                : Colors.black,
+                            fontSize: 15,
+                          ),
+                        ),
                       ),
-                    ),
 
-                    child: Text(
+                      Padding(
 
-                      message["text"],
+                        padding: const EdgeInsets.only(
+                          bottom: 12,
+                          left: 6,
+                          right: 6,
+                        ),
 
-                      style: TextStyle(
-                        color: isMe
-                            ? Colors.white
-                            : Colors.black,
+                        child: Text(msg["time"],
+                          style: TextStyle(
+                            color:
+                            Colors.grey.shade500,
+                            fontSize: 11,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 );
               },
             ),
           ),
 
+          // INPUT AREA
+
           Container(
 
             padding:
-            const EdgeInsets.all(12),
+            const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
 
-            color: Colors.white,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+            ),
 
             child: Row(
               children: [
 
+                // TEXT FIELD
+
                 Expanded(
+
                   child: TextField(
 
                     controller:
                     messageController,
+
+                    cursorColor:
+                    Colors.orange,
 
                     decoration:
                     InputDecoration(
@@ -354,6 +341,12 @@ class _ChatScreenState
 
                       fillColor:
                       Colors.grey.shade100,
+
+                      contentPadding:
+                      const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
 
                       border:
                       OutlineInputBorder(
@@ -371,6 +364,8 @@ class _ChatScreenState
                 ),
 
                 const SizedBox(width: 10),
+
+                // SEND BUTTON
 
                 GestureDetector(
 
