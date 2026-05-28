@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'create_profile.dart';
+import 'view/create_profile.dart';
 
 void main() {
+
   runApp(const MyApp());
 }
 

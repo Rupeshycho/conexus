@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'edit_profile.dart';
 
 class CreateProfile extends StatefulWidget {
@@ -15,6 +17,20 @@ class _CreateProfileState extends State<CreateProfile> {
   String bio =
       "Visual Storyteller & Motion Designer.\n"
       "Creating digital experiences that pulse with energy.";
+
+  File? profileImage;
+  final ImagePicker picker = ImagePicker();
+
+  Future<void> pickImage() async {
+    final pickedFile =
+    await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        profileImage = File(pickedFile.path);
+      });
+    }
+  }
 
   Future<void> openEditProfile() async {
     final result = await Navigator.push(
@@ -37,6 +53,49 @@ class _CreateProfileState extends State<CreateProfile> {
     }
   }
 
+  void openViewProfile() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("My Profile"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: CircleAvatar(
+                radius: 40,
+                backgroundColor: Colors.deepOrange,
+                backgroundImage: profileImage != null
+                    ? FileImage(profileImage!)
+                    : null,
+                child: profileImage == null
+                    ? const Icon(
+                  Icons.person,
+                  color: Colors.white,
+                  size: 40,
+                )
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 15),
+            Text("Name: $name"),
+            const SizedBox(height: 5),
+            Text("Username: $username"),
+            const SizedBox(height: 10),
+            Text("Bio:\n$bio"),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -48,7 +107,6 @@ class _CreateProfileState extends State<CreateProfile> {
           backgroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
-
           title: const Text(
             "Conexus",
             style: TextStyle(
@@ -56,12 +114,10 @@ class _CreateProfileState extends State<CreateProfile> {
               fontWeight: FontWeight.bold,
             ),
           ),
-
           leading: const Icon(
             Icons.menu,
             color: Colors.grey,
           ),
-
           actions: const [
             Padding(
               padding: EdgeInsets.only(right: 15),
@@ -79,21 +135,15 @@ class _CreateProfileState extends State<CreateProfile> {
               const SizedBox(height: 10),
 
               Padding(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 18),
-
+                padding: const EdgeInsets.symmetric(horizontal: 18),
                 child: Stack(
                   alignment: Alignment.bottomCenter,
                   clipBehavior: Clip.none,
-
                   children: [
                     Container(
                       height: 180,
-
                       decoration: BoxDecoration(
-                        borderRadius:
-                        BorderRadius.circular(28),
-
+                        borderRadius: BorderRadius.circular(28),
                         gradient: LinearGradient(
                           colors: [
                             Colors.orange.shade300,
@@ -105,20 +155,28 @@ class _CreateProfileState extends State<CreateProfile> {
 
                     Positioned(
                       bottom: -55,
-
                       child: CircleAvatar(
                         radius: 58,
                         backgroundColor: Colors.white,
-
                         child: CircleAvatar(
                           radius: 54,
-                          backgroundColor:
-                          Colors.orange.shade100,
+                          backgroundColor: Colors.orange.shade100,
 
-                          child: const Icon(
-                            Icons.person,
-                            size: 60,
-                            color: Colors.deepOrange,
+                          child: GestureDetector(
+                            onTap: pickImage,
+                            child: CircleAvatar(
+                              radius: 54,
+                              backgroundImage: profileImage != null
+                                  ? FileImage(profileImage!)
+                                  : null,
+                              child: profileImage == null
+                                  ? const Icon(
+                                Icons.person,
+                                size: 60,
+                                color: Colors.deepOrange,
+                              )
+                                  : null,
+                            ),
                           ),
                         ),
                       ),
@@ -150,9 +208,7 @@ class _CreateProfileState extends State<CreateProfile> {
               const SizedBox(height: 25),
 
               Row(
-                mainAxisAlignment:
-                MainAxisAlignment.spaceEvenly,
-
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   buildStat("142", "Posts"),
                   buildStat("12.8k", "Followers"),
@@ -163,13 +219,10 @@ class _CreateProfileState extends State<CreateProfile> {
               const SizedBox(height: 30),
 
               Padding(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 30),
-
+                padding: const EdgeInsets.symmetric(horizontal: 30),
                 child: Text(
                   bio,
                   textAlign: TextAlign.center,
-
                   style: const TextStyle(
                     color: Colors.black54,
                     fontSize: 16,
@@ -181,64 +234,43 @@ class _CreateProfileState extends State<CreateProfile> {
               const SizedBox(height: 30),
 
               Row(
-                mainAxisAlignment:
-                MainAxisAlignment.center,
-
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   ElevatedButton(
                     onPressed: openEditProfile,
-
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                      Colors.deepOrange,
-
-                      padding:
-                      const EdgeInsets.symmetric(
-                        horizontal: 35,
+                      backgroundColor: Colors.deepOrange,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 25,
                         vertical: 15,
                       ),
-
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                        BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-
                     child: const Text(
                       "Edit Profile",
-                      style: TextStyle(
-                        color: Colors.white,
-                      ),
+                      style: TextStyle(color: Colors.white),
                     ),
                   ),
 
-                  const SizedBox(width: 15),
+                  const SizedBox(width: 12),
 
                   OutlinedButton(
-                    onPressed: () {},
-
+                    onPressed: openViewProfile,
                     style: OutlinedButton.styleFrom(
-                      padding:
-                      const EdgeInsets.symmetric(
-                        horizontal: 35,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 25,
                         vertical: 15,
                       ),
-
-                      side: const BorderSide(
-                        color: Colors.deepOrange,
-                      ),
-
+                      side: const BorderSide(color: Colors.deepOrange),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                        BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-
                     child: const Text(
-                      "Share",
-                      style: TextStyle(
-                        color: Colors.deepOrange,
-                      ),
+                      "View Own Profile",
+                      style: TextStyle(color: Colors.deepOrange),
                     ),
                   ),
                 ],
@@ -250,7 +282,6 @@ class _CreateProfileState extends State<CreateProfile> {
                 labelColor: Colors.deepOrange,
                 unselectedLabelColor: Colors.grey,
                 indicatorColor: Colors.deepOrange,
-
                 tabs: [
                   Tab(icon: Icon(Icons.grid_on)),
                   Tab(icon: Icon(Icons.video_collection)),
@@ -260,7 +291,6 @@ class _CreateProfileState extends State<CreateProfile> {
 
               SizedBox(
                 height: 500,
-
                 child: TabBarView(
                   children: [
                     buildGrid(),
@@ -287,14 +317,10 @@ class _CreateProfileState extends State<CreateProfile> {
             color: Colors.deepOrange,
           ),
         ),
-
         const SizedBox(height: 5),
-
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.black54,
-          ),
+          style: const TextStyle(color: Colors.black54),
         ),
       ],
     );
@@ -303,21 +329,16 @@ class _CreateProfileState extends State<CreateProfile> {
   Widget buildGrid() {
     return GridView.builder(
       padding: const EdgeInsets.all(15),
-
       itemCount: 12,
-
-      gridDelegate:
-      const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
       ),
-
       itemBuilder: (context, index) {
         return Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-
             gradient: LinearGradient(
               colors: [
                 Colors.orange.shade200,
@@ -325,7 +346,6 @@ class _CreateProfileState extends State<CreateProfile> {
               ],
             ),
           ),
-
           child: const Icon(
             Icons.image,
             color: Colors.white,
