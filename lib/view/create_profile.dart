@@ -285,7 +285,6 @@ class _CreateProfileState extends State<CreateProfile> {
                 tabs: [
                   Tab(icon: Icon(Icons.grid_on)),
                   Tab(icon: Icon(Icons.video_collection)),
-
                 ],
               ),
 
@@ -293,7 +292,6 @@ class _CreateProfileState extends State<CreateProfile> {
                 height: 500,
                 child: TabBarView(
                   children: [
-                    buildGrid(),
                     buildGrid(),
                     buildGrid(),
                   ],
