@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'edit_profile.dart';
 
-class CreateProfile extends StatefulWidget {
-  const CreateProfile({super.key});
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
 
   @override
-  State<CreateProfile> createState() => _CreateProfileState();
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _CreateProfileState extends State<CreateProfile> {
+class _ProfileScreenState extends State<ProfileScreen> {
   String name = "Sandip Rawal";
   String username = "@creative_sandip";
 
@@ -66,9 +66,8 @@ class _CreateProfileState extends State<CreateProfile> {
               child: CircleAvatar(
                 radius: 40,
                 backgroundColor: Colors.deepOrange,
-                backgroundImage: profileImage != null
-                    ? FileImage(profileImage!)
-                    : null,
+                backgroundImage:
+                profileImage != null ? FileImage(profileImage!) : null,
                 child: profileImage == null
                     ? const Icon(
                   Icons.person,
@@ -152,7 +151,6 @@ class _CreateProfileState extends State<CreateProfile> {
                         ),
                       ),
                     ),
-
                     Positioned(
                       bottom: -55,
                       child: CircleAvatar(
@@ -161,7 +159,6 @@ class _CreateProfileState extends State<CreateProfile> {
                         child: CircleAvatar(
                           radius: 54,
                           backgroundColor: Colors.orange.shade100,
-
                           child: GestureDetector(
                             onTap: pickImage,
                             child: CircleAvatar(
@@ -253,9 +250,7 @@ class _CreateProfileState extends State<CreateProfile> {
                       style: TextStyle(color: Colors.white),
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
                   OutlinedButton(
                     onPressed: openViewProfile,
                     style: OutlinedButton.styleFrom(
