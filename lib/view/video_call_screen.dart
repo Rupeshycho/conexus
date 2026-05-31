@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 
 class VideoCallScreen extends StatefulWidget {
   final String username;
+  final bool isVideoEnabled;
 
   const VideoCallScreen({
     super.key,
     required this.username,
+    this.isVideoEnabled = true,
   });
 
   @override
@@ -14,7 +16,6 @@ class VideoCallScreen extends StatefulWidget {
 }
 
 class _VideoCallScreenState extends State<VideoCallScreen> {
-
   bool isMuted = false;
   bool isVideoOn = true;
   bool isScreenSharing = false;
@@ -26,12 +27,16 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   void initState() {
     super.initState();
 
-    // START CALL TIMER
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        _seconds++;
-      });
-    });
+    isVideoOn = widget.isVideoEnabled;
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+          (timer) {
+        setState(() {
+          _seconds++;
+        });
+      },
+    );
   }
 
   @override
@@ -59,44 +64,48 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-
       body: SafeArea(
         child: Column(
           children: [
-
             // TOP BAR
+
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 10,
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment:
+                MainAxisAlignment.spaceBetween,
                 children: [
-
                   CircleAvatar(
                     backgroundColor: Colors.white12,
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                      ),
+                      onPressed: () =>
+                          Navigator.pop(context),
                     ),
                   ),
 
                   Column(
                     children: [
-
-                      const Text(
-                        "Video Call",
-                        style: TextStyle(
+                      Text(
+                        isVideoOn
+                            ? "Video Call"
+                            : "Audio Call",
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontWeight:
+                          FontWeight.bold,
                         ),
                       ),
 
                       const SizedBox(height: 2),
 
-                      // CALL TIMER
                       Text(
                         callDuration,
                         style: const TextStyle(
@@ -114,16 +123,20 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
 
             const Spacer(),
 
-            // PROFILE IMAGE
+            // USER AVATAR
+
             CircleAvatar(
               radius: 60,
-              backgroundColor: Colors.grey.shade800,
+              backgroundColor:
+              Colors.grey.shade800,
               child: Text(
-                widget.username[0].toUpperCase(),
+                widget.username[0]
+                    .toUpperCase(),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 45,
-                  fontWeight: FontWeight.bold,
+                  fontWeight:
+                  FontWeight.bold,
                 ),
               ),
             ),
@@ -135,14 +148,17 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 28,
-                fontWeight: FontWeight.bold,
+                fontWeight:
+                FontWeight.bold,
               ),
             ),
 
             const SizedBox(height: 10),
 
             Text(
-              isVideoOn ? "Video Calling..." : "Voice Calling...",
+              isVideoOn
+                  ? "Video Calling..."
+                  : "Voice Calling...",
               style: const TextStyle(
                 color: Colors.white70,
                 fontSize: 16,
@@ -151,7 +167,8 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
 
             const Spacer(),
 
-            // BUTTONS
+            // CONTROLS
+
             Padding(
               padding: const EdgeInsets.only(
                 bottom: 40,
@@ -159,14 +176,20 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                 right: 20,
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisAlignment:
+                MainAxisAlignment.spaceEvenly,
                 children: [
-
                   _buildButton(
-                    icon: isMuted ? Icons.mic_off : Icons.mic,
-                    color: isMuted ? Colors.red : Colors.white24,
+                    icon: isMuted
+                        ? Icons.mic_off
+                        : Icons.mic,
+                    color: isMuted
+                        ? Colors.red
+                        : Colors.white24,
                     onTap: () {
-                      setState(() => isMuted = !isMuted);
+                      setState(() {
+                        isMuted = !isMuted;
+                      });
                     },
                   ),
 
@@ -178,20 +201,25 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                         ? Colors.white24
                         : Colors.orange,
                     onTap: () {
-                      setState(() => isVideoOn = !isVideoOn);
+                      setState(() {
+                        isVideoOn = !isVideoOn;
+                      });
                     },
                   ),
 
                   _buildButton(
                     icon: isScreenSharing
-                        ? Icons.stop_screen_share_rounded
-                        : Icons.screen_share_rounded,
+                        ? Icons
+                        .stop_screen_share_rounded
+                        : Icons
+                        .screen_share_rounded,
                     color: isScreenSharing
-                        ? const Color(0xFFE53935)
-                        : const Color(0xFF1E88E5),
+                        ? Colors.red
+                        : Colors.blue,
                     onTap: () {
                       setState(() {
-                        isScreenSharing = !isScreenSharing;
+                        isScreenSharing =
+                        !isScreenSharing;
                       });
                     },
                   ),
@@ -199,7 +227,9 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                   _buildButton(
                     icon: Icons.call_end,
                     color: Colors.red,
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
                   ),
                 ],
               ),
@@ -223,7 +253,11 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
           color: color,
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Colors.white, size: 28),
+        child: Icon(
+          icon,
+          color: Colors.white,
+          size: 28,
+        ),
       ),
     );
   }

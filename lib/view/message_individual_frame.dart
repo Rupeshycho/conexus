@@ -87,11 +87,13 @@ class _ChatScreenState extends State<ChatScreen> {
   // AUDIO CALL
 
   void startAudioCall() {
-
-    ScaffoldMessenger.of(context).showSnackBar(
-
-      const SnackBar(
-        content: Text("Audio Call Coming Soon 📞"),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VideoCallScreen(
+          username: widget.username,
+          isVideoEnabled: false,
+        ),
       ),
     );
   }
@@ -186,14 +188,13 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
 
             onPressed: () {
-              Navigator.push(context,
+              Navigator.push(
+                context,
                 MaterialPageRoute(
-                  builder: (_) =>
-                      VideoCallScreen(
-
-                        username:
-                        widget.username,
-                      ),
+                  builder: (_) => VideoCallScreen(
+                    username: widget.username,
+                    isVideoEnabled: true,
+                  ),
                 ),
               );
             },
@@ -201,15 +202,17 @@ class _ChatScreenState extends State<ChatScreen> {
 
           // AUDIO CALL
 
-          IconButton(
+          // AUDIO CALL
 
+          IconButton(
             icon: const Icon(
               Icons.call,
               color: Colors.black,
             ),
-
             onPressed: startAudioCall,
           ),
+
+          const SizedBox(width: 5),
 
           const SizedBox(width: 5),
         ],
