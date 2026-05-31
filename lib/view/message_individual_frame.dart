@@ -322,45 +322,47 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Row(
               children: [
 
+                // FILE BUTTON
+
+                IconButton(
+                  icon: const Icon(
+                    Icons.attach_file,
+                    color: Colors.orange,
+                  ),
+                  onPressed: () {
+                    // Pick file
+                  },
+                ),
+
+                // CAMERA BUTTON
+
+                IconButton(
+                  icon: const Icon(
+                    Icons.camera_alt,
+                    color: Colors.orange,
+                  ),
+                  onPressed: () {
+                    // Open camera
+                  },
+                ),
+
                 // TEXT FIELD
 
                 Expanded(
-
                   child: TextField(
-
-                    controller:
-                    messageController,
-
-                    cursorColor:
-                    Colors.orange,
-
-                    decoration:
-                    InputDecoration(
-
-                      hintText:
-                      "Type message...",
-
+                    controller: messageController,
+                    cursorColor: Colors.orange,
+                    decoration: InputDecoration(
+                      hintText: "Type message...",
                       filled: true,
-
-                      fillColor:
-                      Colors.grey.shade100,
-
-                      contentPadding:
-                      const EdgeInsets.symmetric(
+                      fillColor: Colors.grey.shade100,
+                      contentPadding: const EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 14,
                       ),
-
-                      border:
-                      OutlineInputBorder(
-
-                        borderRadius:
-                        BorderRadius.circular(
-                          30,
-                        ),
-
-                        borderSide:
-                        BorderSide.none,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide.none,
                       ),
                     ),
                   ),
@@ -371,20 +373,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 // SEND BUTTON
 
                 GestureDetector(
-
                   onTap: sendMessage,
-
                   child: Container(
-
                     height: 52,
                     width: 52,
-
-                    decoration:
-                    const BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.orange,
                       shape: BoxShape.circle,
                     ),
-
                     child: const Icon(
                       Icons.send,
                       color: Colors.white,
