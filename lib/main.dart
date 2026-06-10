@@ -5,6 +5,7 @@ import 'views/register.dart';
 import 'package:provider/provider.dart';
 import 'viewmodels/auth_viewmodel.dart';
 import 'package:conexus/views/login_screen.dart';
+import 'views/splash_screen.dart';
 void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +26,7 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: LoginScreen(),
+      home: SplashScreen(),
     );
   }
 }

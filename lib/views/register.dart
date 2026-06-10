@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login_screen.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -14,8 +14,6 @@ class _SignupScreenState extends State<SignupScreen> {
   bool hideConfirmPassword = true;
   bool isChecked = false;
 
-  TextEditingController fullNameController =
-  TextEditingController();
 
   TextEditingController emailController =
   TextEditingController();
@@ -57,12 +55,21 @@ class _SignupScreenState extends State<SignupScreen> {
     }
 
     try {
-
-      await FirebaseAuth.instance
+      UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
+
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(userCredential.user!.uid)
+          .set({
+        "email": emailController.text.trim(),
+        "username": usernameController.text.trim(),
+        "uid": userCredential.user!.uid,
+        "createdAt": DateTime.now(),
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -183,15 +190,6 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 40),
-
-                    buildLabel("Full Name"),
-
-                    buildTextField(
-                      controller: fullNameController,
-                      hint: "Enter your name",
-                      icon: Icons.person_outline,
-                    ),
 
                     const SizedBox(height: 18),
 
@@ -262,37 +260,131 @@ class _SignupScreenState extends State<SignupScreen> {
 
                         Checkbox(
                           value: isChecked,
-
-                          activeColor:
-                          Colors.deepOrange,
-
+                          activeColor: Colors.deepOrange,
                           onChanged: (value) {
-
                             setState(() {
                               isChecked = value!;
                             });
-
                           },
                         ),
 
                         const Text(
                           "Agree to ",
-                          style: TextStyle(
-                            color: Colors.grey,
-                          ),
+                          style: TextStyle(color: Colors.grey),
                         ),
 
-                        const Text(
-                          "Terms & Conditions",
+                        GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  title: const Text(
+                                    "Terms and Conditions",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.deepOrange,
+                                    ),
+                                  ),
+                                  content: SingleChildScrollView(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: const [
 
-                          style: TextStyle(
-                            color: Colors.deepOrange,
-                            fontWeight: FontWeight.bold,
+                                        Text(
+                                          "Welcome to Conexus. By creating an account and using our application, you agree to the following terms:",
+                                          style: TextStyle(color: Colors.grey),
+                                        ),
+
+                                        SizedBox(height: 12),
+
+                                        Text("1. Users must provide accurate information during registration."),
+                                        SizedBox(height: 8),
+                                        Text("2. Users are responsible for maintaining the security of their accounts and passwords."),
+                                        SizedBox(height: 8),
+                                        Text("3. Users must not post content that is illegal, abusive, hateful, threatening, or harmful to others."),
+                                        SizedBox(height: 8),
+                                        Text("4. Users must respect other community members and avoid harassment, bullying, or discrimination."),
+                                        SizedBox(height: 8),
+                                        Text("5. Users may not impersonate another person, organization, or institution."),
+                                        SizedBox(height: 8),
+                                        Text("6. Conexus reserves the right to remove content that violates these rules."),
+                                        SizedBox(height: 8),
+                                        Text("7. Conexus may suspend or terminate accounts involved in inappropriate, fraudulent, or harmful activities."),
+                                        SizedBox(height: 8),
+                                        Text("8. Users retain ownership of their content but grant Conexus permission to display content within the platform."),
+                                        SizedBox(height: 8),
+                                        Text("9. Conexus is not responsible for user-generated content posted by members."),
+                                        SizedBox(height: 8),
+                                        Text("10. We may update these Terms and Conditions from time to time. Continued use of the application indicates acceptance of any updates."),
+                                        SizedBox(height: 12),
+
+                                        Text(
+                                          "By using Conexus, you acknowledge that you have read and agreed to these Terms and Conditions.",
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  actions: [
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.deepOrange,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(30),
+                                          ),
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            isChecked = true; // auto check when user reads and clicks agree
+                                          });
+                                          Navigator.pop(context);
+                                        },
+                                        child: const Text(
+                                          "I Agree",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                        },
+                                        child: const Text(
+                                          "Close",
+                                          style: TextStyle(color: Colors.grey),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                          child: const Text(
+                            "Terms & Conditions",
+                            style: TextStyle(
+                              color: Colors.deepOrange,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 10),
 
                     Container(
@@ -414,7 +506,6 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
     );
   }
-
   Widget buildLabel(String text) {
 
     return Padding(
@@ -447,6 +538,7 @@ class _SignupScreenState extends State<SignupScreen> {
       decoration: InputDecoration(
 
         hintText: hint,
+        hintStyle: TextStyle(color: Colors.grey.shade400), // 👈 added
 
         prefixIcon: Icon(
           icon,
@@ -501,6 +593,7 @@ class _SignupScreenState extends State<SignupScreen> {
       decoration: InputDecoration(
 
         hintText: hint,
+        hintStyle: TextStyle(color: Colors.grey.shade400), // 👈 added
 
         prefixIcon: const Icon(
           Icons.lock_outline,
