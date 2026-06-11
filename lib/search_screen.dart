@@ -12,13 +12,13 @@ class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController searchController = TextEditingController();
 
   List<String> users = [
-    "Rupesh",
-    "Anju",
-    "Sangya",
-    "Flutter Dev",
+    "Rupesh Yadav",
+    "Ujjwal Aacharya",
+    "Sandesh Sahi",
+    "Sandish Prajapati ",
     "Meta",
     "Instagram",
-    "Java Student",
+    "Softwarica College",
   ];
 
   List<String> filteredUsers = [];
