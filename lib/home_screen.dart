@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'search_screen.dart';
 
+
 class HomeScreen extends StatefulWidget {  // Changed from HomeFeed
   const HomeScreen({super.key});
 
