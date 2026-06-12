@@ -1,4 +1,4 @@
-import 'package:conexus/view/create_profile.dart';
+import 'package:conexus/view/profile_screen.dart';
 import 'package:flutter/material.dart';
 
 
@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.deepOrange,
       ),
-      home: const CreateProfile(),
+      home: const ProfileScreen(),
     );
   }
 }
