@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'edit_profile.dart';
+import 'share_profile.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -53,44 +54,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void openViewProfile() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("My Profile"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: CircleAvatar(
-                radius: 40,
-                backgroundColor: Colors.deepOrange,
-                backgroundImage:
-                profileImage != null ? FileImage(profileImage!) : null,
-                child: profileImage == null
-                    ? const Icon(
-                  Icons.person,
-                  color: Colors.white,
-                  size: 40,
-                )
-                    : null,
-              ),
-            ),
-            const SizedBox(height: 15),
-            Text("Name: $name"),
-            const SizedBox(height: 5),
-            Text("Username: $username"),
-            const SizedBox(height: 10),
-            Text("Bio:\n$bio"),
-          ],
+  void openShareProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ShareProfileScreen(
+          name: name,
+          username: username,
+          bio: bio,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Close"),
-          ),
-        ],
       ),
     );
   }
@@ -251,8 +223,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  OutlinedButton(
-                    onPressed: openViewProfile,
+                  OutlinedButton.icon(
+                    onPressed: openShareProfile,
+                    icon: const Icon(
+                      Icons.share,
+                      color: Colors.deepOrange,
+                    ),
+                    label: const Text(
+                      "Share Profile",
+                      style: TextStyle(color: Colors.deepOrange),
+                    ),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 25,
@@ -262,10 +242,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
-                    ),
-                    child: const Text(
-                      "View Own Profile",
-                      style: TextStyle(color: Colors.deepOrange),
                     ),
                   ),
                 ],
