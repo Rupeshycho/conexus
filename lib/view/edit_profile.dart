@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class EditProfile extends StatefulWidget {
   final String currentName;
@@ -21,6 +23,9 @@ class _EditProfileState extends State<EditProfile> {
   late TextEditingController usernameController;
   late TextEditingController bioController;
 
+  File? profileImage;
+  final ImagePicker picker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
@@ -33,6 +38,18 @@ class _EditProfileState extends State<EditProfile> {
 
     bioController =
         TextEditingController(text: widget.currentBio);
+  }
+
+  Future<void> pickImage() async {
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+    );
+
+    if (pickedFile != null) {
+      setState(() {
+        profileImage = File(pickedFile.path);
+      });
+    }
   }
 
   @override
@@ -48,12 +65,10 @@ class _EditProfileState extends State<EditProfile> {
       labelText: label,
       filled: true,
       fillColor: Colors.grey.shade100,
-
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide.none,
       ),
-
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
         borderSide: const BorderSide(
@@ -68,33 +83,78 @@ class _EditProfileState extends State<EditProfile> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8F8),
-
       appBar: AppBar(
         backgroundColor: Colors.deepOrange,
         title: const Text(
           "Edit Profile",
           style: TextStyle(color: Colors.white),
         ),
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+        ),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-
         child: Column(
           children: [
             const SizedBox(height: 20),
 
-            const CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.deepOrange,
-              child: Icon(
-                Icons.person,
-                color: Colors.white,
-                size: 50,
+            Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                GestureDetector(
+                  onTap: pickImage,
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.deepOrange,
+                    backgroundImage: profileImage != null
+                        ? FileImage(profileImage!)
+                        : null,
+                    child: profileImage == null
+                        ? const Icon(
+                      Icons.person,
+                      color: Colors.white,
+                      size: 50,
+                    )
+                        : null,
+                  ),
+                ),
+
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.deepOrange,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    onPressed: pickImage,
+                    icon: const Icon(
+                      Icons.camera_alt,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            TextButton.icon(
+              onPressed: pickImage,
+              icon: const Icon(
+                Icons.photo_library,
+                color: Colors.deepOrange,
+              ),
+              label: const Text(
+                "Change Profile Picture",
+                style: TextStyle(
+                  color: Colors.deepOrange,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
 
-            const SizedBox(height: 35),
+            const SizedBox(height: 25),
 
             TextField(
               controller: nameController,
@@ -121,24 +181,24 @@ class _EditProfileState extends State<EditProfile> {
             SizedBox(
               width: double.infinity,
               height: 55,
-
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(context, {
-                    "name": nameController.text,
-                    "username": usernameController.text,
-                    "bio": bioController.text,
-                  });
+                  Navigator.pop(
+                    context,
+                    {
+                      "name": nameController.text,
+                      "username": usernameController.text,
+                      "bio": bioController.text,
+                      "profileImage": profileImage,
+                    },
+                  );
                 },
-
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepOrange,
-
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
                   ),
                 ),
-
                 child: const Text(
                   "Save Changes",
                   style: TextStyle(
