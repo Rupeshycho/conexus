@@ -14,7 +14,7 @@ class ChatScreen extends StatefulWidget {
   final String receiverId;
   final String username;
   final String profileImage;
-git
+
   const ChatScreen({
     super.key,
     required this.receiverId,
