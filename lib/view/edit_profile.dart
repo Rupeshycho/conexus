@@ -1,17 +1,22 @@
 import 'dart:io';
+import 'package:conexus/repo/image_repo_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+
+import '../repo/image_repo.dart';
 
 class EditProfile extends StatefulWidget {
   final String currentName;
   final String currentUsername;
   final String currentBio;
+  final String currentImageUrl;
 
   const EditProfile({
     super.key,
     required this.currentName,
     required this.currentUsername,
     required this.currentBio,
+    required this.currentImageUrl,
   });
 
   @override
@@ -24,20 +29,22 @@ class _EditProfileState extends State<EditProfile> {
   late TextEditingController bioController;
 
   File? profileImage;
+  String? uploadedImageUrl;
+
+  bool isLoading = false;
+
   final ImagePicker picker = ImagePicker();
+  final ImageRepo imageRepo = ImageRepoImpl();
 
   @override
   void initState() {
     super.initState();
 
-    nameController =
-        TextEditingController(text: widget.currentName);
+    nameController = TextEditingController(text: widget.currentName);
+    usernameController = TextEditingController(text: widget.currentUsername);
+    bioController = TextEditingController(text: widget.currentBio);
 
-    usernameController =
-        TextEditingController(text: widget.currentUsername);
-
-    bioController =
-        TextEditingController(text: widget.currentBio);
+    uploadedImageUrl = widget.currentImageUrl;
   }
 
   Future<void> pickImage() async {
@@ -50,6 +57,15 @@ class _EditProfileState extends State<EditProfile> {
         profileImage = File(pickedFile.path);
       });
     }
+  }
+
+  Future<String> uploadImageIfNeeded() async {
+    if (profileImage == null) {
+      return uploadedImageUrl ?? "";
+    }
+
+    final url = await imageRepo.uploadImage(profileImage!);
+    return url;
   }
 
   @override
@@ -89,9 +105,7 @@ class _EditProfileState extends State<EditProfile> {
           "Edit Profile",
           style: TextStyle(color: Colors.white),
         ),
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -109,29 +123,20 @@ class _EditProfileState extends State<EditProfile> {
                     backgroundColor: Colors.deepOrange,
                     backgroundImage: profileImage != null
                         ? FileImage(profileImage!)
+                        : (uploadedImageUrl != null &&
+                        uploadedImageUrl!.isNotEmpty)
+                        ? NetworkImage(uploadedImageUrl!)
+                    as ImageProvider
                         : null,
-                    child: profileImage == null
+                    child: (profileImage == null &&
+                        (uploadedImageUrl == null ||
+                            uploadedImageUrl!.isEmpty))
                         ? const Icon(
                       Icons.person,
                       color: Colors.white,
                       size: 50,
                     )
                         : null,
-                  ),
-                ),
-
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.deepOrange,
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    onPressed: pickImage,
-                    icon: const Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 18,
-                    ),
                   ),
                 ),
               ],
@@ -182,16 +187,25 @@ class _EditProfileState extends State<EditProfile> {
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(
-                    context,
-                    {
-                      "name": nameController.text,
-                      "username": usernameController.text,
-                      "bio": bioController.text,
-                      "profileImage": profileImage,
-                    },
-                  );
+                onPressed: () async {
+                  setState(() => isLoading = true);
+
+                  final imageUrl = await uploadImageIfNeeded();
+
+                  if (!context.mounted) return;
+
+                  final result = {
+                    "name": nameController.text,
+                    "username": usernameController.text,
+                    "bio": bioController.text,
+                    "profileImageUrl": imageUrl,
+                  };
+
+                  setState(() => isLoading = false);
+
+                  if (!context.mounted) return;
+
+                  Navigator.of(context).pop(result);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepOrange,
@@ -199,7 +213,16 @@ class _EditProfileState extends State<EditProfile> {
                     borderRadius: BorderRadius.circular(18),
                   ),
                 ),
-                child: const Text(
+                child: isLoading
+                    ? const SizedBox(
+                  height: 22,
+                  width: 22,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+                    : const Text(
                   "Save Changes",
                   style: TextStyle(
                     color: Colors.white,

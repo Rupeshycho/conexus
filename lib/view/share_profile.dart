@@ -17,8 +17,9 @@ class ShareProfileScreen extends StatelessWidget {
   String get profileLink =>
       "conexus.app/profile/${username.replaceAll('@', '')}";
 
-  void _copyLink(BuildContext context) async {
-    await Clipboard.setData(ClipboardData(text: profileLink));
+  void _copyLink(BuildContext context) {
+    Clipboard.setData(ClipboardData(text: profileLink));
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Profile link copied to clipboard!"),
@@ -55,7 +56,7 @@ class ShareProfileScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -104,7 +105,7 @@ class ShareProfileScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.deepOrange.withOpacity(0.08),
+                    color: Colors.deepOrange.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(

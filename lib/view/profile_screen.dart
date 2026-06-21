@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'edit_profile.dart';
@@ -19,7 +18,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       "Visual Storyteller & Motion Designer.\n"
       "Creating digital experiences that pulse with energy.";
 
-  File? profileImage;
+  String? profileImageUrl; // ✅ Cloudinary image URL (NOT File anymore)
+
   final ImagePicker picker = ImagePicker();
 
   Future<void> pickImage() async {
@@ -27,9 +27,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
-      setState(() {
-        profileImage = File(pickedFile.path);
-      });
+      // ❌ DO NOT store File anymore (Cloudinary will handle upload in EditProfile)
+      // just open edit screen or ignore here
     }
   }
 
@@ -41,15 +40,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
           currentName: name,
           currentUsername: username,
           currentBio: bio,
+          currentImageUrl: profileImageUrl ?? "",
         ),
       ),
     );
 
+    if (!mounted) return;
+
     if (result != null) {
       setState(() {
-        name = result["name"];
-        username = result["username"];
-        bio = result["bio"];
+        name = result["name"] ?? name;
+        username = result["username"] ?? username;
+        bio = result["bio"] ?? bio;
+
+        // ✅ Cloudinary URL from EditProfile
+        profileImageUrl = result["profileImageUrl"];
       });
     }
   }
@@ -123,6 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                     ),
+
                     Positioned(
                       bottom: -55,
                       child: CircleAvatar(
@@ -131,21 +137,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: CircleAvatar(
                           radius: 54,
                           backgroundColor: Colors.orange.shade100,
-                          child: GestureDetector(
-                            onTap: pickImage,
-                            child: CircleAvatar(
-                              radius: 54,
-                              backgroundImage: profileImage != null
-                                  ? FileImage(profileImage!)
-                                  : null,
-                              child: profileImage == null
-                                  ? const Icon(
-                                Icons.person,
-                                size: 60,
-                                color: Colors.deepOrange,
-                              )
-                                  : null,
-                            ),
+                          child: CircleAvatar(
+                            radius: 54,
+                            backgroundImage:
+                            (profileImageUrl != null &&
+                                profileImageUrl!.isNotEmpty)
+                                ? NetworkImage(profileImageUrl!)
+                                : null,
+
+                            child: (profileImageUrl == null ||
+                                profileImageUrl!.isEmpty)
+                                ? const Icon(
+                              Icons.person,
+                              size: 60,
+                              color: Colors.deepOrange,
+                            )
+                                : null,
                           ),
                         ),
                       ),
