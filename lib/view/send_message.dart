@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import "package:firebase_auth/firebase_auth.dart";
 import 'package:conexus/viewmodel/user_view_model.dart';
 import 'chat_tile.dart';
 import 'select_user_screen.dart';
