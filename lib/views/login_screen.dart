@@ -1,6 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'register.dart';
+import 'forgot_password.dart';
+import 'package:conexus/services/auth_service.dart';          // 👈 ADD THIS
+
 class LoginScreen extends StatefulWidget {
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -9,25 +12,49 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool visibility = true;
 
+  final AuthService _authService = AuthService();  // 👈 ADD THIS
+
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
 
   Future<void> loginUser() async {
+
+    if (emailController.text.trim().isEmpty ||
+        passwordController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Please enter email and password")),
+      );
+      return;
+    }
+
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+      User? user = await _authService.login(   // 👈 USE AuthService
+        emailController.text.trim().toLowerCase(),
+        passwordController.text.trim(),
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login Successful")),
-      );
+      if (user != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>SignupScreen (), // 👈 your home screen name
+          ),
+        );
+      }
+
     } on FirebaseAuthException catch (e) {
+      print("🔴 CODE: ${e.code}");             // 👈 CHECK THIS IN CONSOLE
+      print("🔴 MSG: ${e.message}");
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? "Login Failed")),
+        SnackBar(
+          content: Text(e.message ?? "Login Failed"),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +174,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       alignment: Alignment.centerRight,
                       child: GestureDetector(
                         onTap: () {
-                          // TODO: navigate to forgot password screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ForgotPasswordScreen(),
+                            ),
+                          );
                         },
                         child: Text(
                           "Forgot Password?",

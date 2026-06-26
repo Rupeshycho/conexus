@@ -12,7 +12,12 @@
           "package_name": "com.example.conexus"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1069485922735-0mang2uq1ni2t8gngl4qvlcan3v39h5p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCHfSgfZcRLLIjw8SiD6cHdeerYe81u5tE"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1069485922735-0mang2uq1ni2t8gngl4qvlcan3v39h5p.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1069485922735-p6r2jl29tqklq4nk54t1sp0uecghvung.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.conexus"
+              }
+            }
+          ]
         }
       }
     }
