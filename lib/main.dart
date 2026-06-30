@@ -1,15 +1,21 @@
-import 'package:conexus/views/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:app_links/app_links.dart';
+
+import 'package:conexus/firebase_options.dart';
 import 'package:conexus/views/login_screen.dart';
 import 'package:conexus/views/reset_password_screen.dart';
+import 'package:conexus/views/splash_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const MyApp());
 }
 
@@ -21,8 +27,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-
-  final _appLinks = AppLinks();
+  final AppLinks _appLinks = AppLinks();
 
   @override
   void initState() {
@@ -31,14 +36,13 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _handleIncomingLinks() {
-
-    // Handle link when app is already open
-    _appLinks.uriLinkStream.listen((uri) {
+    // Handle links while app is running
+    _appLinks.uriLinkStream.listen((Uri uri) {
       _processLink(uri);
     });
 
-    // Handle link when app is opened from link
-    _appLinks.getInitialLink().then((uri) {
+    // Handle link when app is opened from a link
+    _appLinks.getInitialLink().then((Uri? uri) {
       if (uri != null) {
         _processLink(uri);
       }
@@ -46,18 +50,15 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _processLink(Uri uri) {
-    print("📥 Incoming link: $uri");
+    debugPrint("📥 Incoming link: $uri");
 
-    // Check if it is a Firebase password reset link
     if (uri.queryParameters.containsKey('oobCode') &&
         uri.queryParameters['mode'] == 'resetPassword') {
+      final String oobCode = uri.queryParameters['oobCode']!;
 
-      final oobCode = uri.queryParameters['oobCode']!;
-
-      // Navigate to custom reset password screen
       navigatorKey.currentState?.push(
         MaterialPageRoute(
-          builder: (context) => ResetPasswordScreen(oobCode: oobCode),
+          builder: (_) => ResetPasswordScreen(oobCode: oobCode),
         ),
       );
     }
@@ -74,6 +75,9 @@ class _MyAppState extends State<MyApp> {
         useMaterial3: true,
       ),
       home: const SplashScreen(),
+      routes: {
+        '/login': (_) => LoginScreen(),
+      },
     );
   }
 }

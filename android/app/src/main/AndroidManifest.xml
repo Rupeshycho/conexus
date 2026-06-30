@@ -30,7 +30,8 @@
         <category android:name="android.intent.category.BROWSABLE"/>
         <data
             android:scheme="https"
-            android:host="conexus-b9d4b.firebaseapp.com"/>
+            android:host="conexus-b9d4b.firebaseapp.com"
+            android:pathPrefix="/__/auth/action"/>
       </intent-filter>
 
     </activity>
