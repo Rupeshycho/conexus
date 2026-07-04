@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -56,7 +53,6 @@ class DefaultFirebaseOptions {
     projectId: 'conexus-b9d4b',
     storageBucket: 'conexus-b9d4b.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDcgfPFiIIfePlfE-OoPu1kqo5qfs6tsxM',
     appId: '1:1069485922735:ios:107f69c4b7303ce727375a',
@@ -65,5 +61,15 @@ class DefaultFirebaseOptions {
     storageBucket: 'conexus-b9d4b.firebasestorage.app',
     iosClientId: '1069485922735-p6r2jl29tqklq4nk54t1sp0uecghvung.apps.googleusercontent.com',
     iosBundleId: 'com.example.conexus',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyA8Zg8POGkVJuOsJY2_JPmqw2Y6yX-Dy5Y',
+    appId: '1:1069485922735:web:9f6b9d841a77a85f27375a',
+    messagingSenderId: '1069485922735',
+    projectId: 'conexus-b9d4b',
+    authDomain: 'conexus-b9d4b.firebaseapp.com',
+    storageBucket: 'conexus-b9d4b.firebasestorage.app',
+    measurementId: 'G-N5QMXN6T63',
   );
 }
