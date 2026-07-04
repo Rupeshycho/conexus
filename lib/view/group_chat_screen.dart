@@ -14,6 +14,8 @@ class GroupChatScreen extends StatefulWidget {
   final String groupName;
   final String groupImage;
 
+  static String? activeChatRoomId;
+
   const GroupChatScreen({
     super.key,
     required this.chatRoomId,
@@ -26,11 +28,38 @@ class GroupChatScreen extends StatefulWidget {
 }
 
 class _GroupChatScreenState extends State<GroupChatScreen> {
+  @override
+  void initState() {
+    super.initState();
+    GroupChatScreen.activeChatRoomId = widget.chatRoomId;
+  }
+
   final TextEditingController messageController = TextEditingController();
   final ScrollController scrollController = ScrollController();
   final ImagePicker _picker = ImagePicker();
   bool _isUploadingImage = false;
   Timer? _typingTimer;
+  Map<String, dynamic>? _replyMessage;
+  final Map<String, GlobalKey> _messageKeys = {};
+  String? _highlightedMessageId;
+
+  void _scrollToMessage(String? messageId) {
+    if (messageId == null || !_messageKeys.containsKey(messageId)) return;
+    
+    final context = _messageKeys[messageId]!.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+      
+      setState(() => _highlightedMessageId = messageId);
+      Timer(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _highlightedMessageId = null);
+      });
+    }
+  }
 
   void sendMessage({String? text, String? imageUrl, String type = 'text'}) async {
     final msgText = text ?? messageController.text.trim();
@@ -42,6 +71,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     final viewModel = context.read<UserViewModel>();
     final senderName = viewModel.user?.name ?? FirebaseAuth.instance.currentUser?.email ?? 'User';
     final senderImage = viewModel.user?.profileImage ?? 'https://i.pravatar.cc/150?u=$currentUserId';
+
+    final replyData = _replyMessage;
+    setState(() {
+      _replyMessage = null;
+    });
 
     if (type == 'text') {
       messageController.clear();
@@ -65,6 +99,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       'senderName': senderName, // Groups need to display who sent it
       'senderImage': senderImage,
       'time': now,
+      'reactions': {},
+      'replyTo': replyData,
     });
 
     // We don't update names and profile images here, just last message
@@ -151,11 +187,131 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     return "$hour:${date.minute.toString().padLeft(2, '0')} $amPm";
   }
 
+  void _showMessageOptions(String docId, Map<String, dynamic> data) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final senderId = data['senderId']?.toString() ?? '';
+    final isMe = currentUserId == senderId;
+    final type = data['type']?.toString() ?? 'text';
+    final senderName = data['senderName']?.toString() ?? 'User';
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: ['❤️', '👍', '🔥', '😂', '😮', '😢'].map((emoji) {
+                  return InkWell(
+                    onTap: () {
+                      _reactToMessage(docId, emoji);
+                      Navigator.pop(context);
+                    },
+                    child: Text(emoji, style: const TextStyle(fontSize: 26)),
+                  );
+                }).toList(),
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.reply, color: Colors.blue),
+                title: const Text('Reply'),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _replyMessage = {
+                      'messageId': docId,
+                      'text': data['type'] == 'image' ? '📷 Image' : (data['text'] ?? ''),
+                      'senderName': isMe ? 'You' : senderName,
+                    };
+                  });
+                },
+              ),
+              if (isMe && type == 'text')
+                ListTile(
+                  leading: const Icon(Icons.edit, color: Colors.blue),
+                  title: const Text('Edit Message'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showEditDialog(docId, data['text']?.toString() ?? '');
+                  },
+                ),
+              if (isMe)
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text('Delete Message'),
+                  onTap: () {
+                    FirebaseFirestore.instance
+                        .collection('chat_rooms')
+                        .doc(widget.chatRoomId)
+                        .collection('messages')
+                        .doc(docId)
+                        .delete();
+                    Navigator.pop(context);
+                  },
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _reactToMessage(String docId, String emoji) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    FirebaseFirestore.instance
+        .collection('chat_rooms')
+        .doc(widget.chatRoomId)
+        .collection('messages')
+        .doc(docId)
+        .set({'reactions': {currentUserId: emoji}}, SetOptions(merge: true));
+  }
+
+  void _showEditDialog(String docId, String currentText) {
+    final TextEditingController editController = TextEditingController(text: currentText);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Message'),
+          content: TextField(controller: editController, autofocus: true),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                final newText = editController.text.trim();
+                if (newText.isNotEmpty && newText != currentText) {
+                  FirebaseFirestore.instance
+                      .collection('chat_rooms')
+                      .doc(widget.chatRoomId)
+                      .collection('messages')
+                      .doc(docId)
+                      .update({'text': newText, 'isEdited': true});
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
   @override
   void dispose() {
+    if (GroupChatScreen.activeChatRoomId == widget.chatRoomId) {
+      GroupChatScreen.activeChatRoomId = null;
+    }
+
     _typingTimer?.cancel();
+
     messageController.dispose();
     scrollController.dispose();
+
     super.dispose();
   }
 
@@ -231,9 +387,15 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     final isEdited = data['isEdited'] as bool? ?? false;
                     final isMe = senderId == currentUserId;
                     final isSystem = type == 'system';
+                    final replyTo = data['replyTo'] as Map<String, dynamic>?;
+
+                    if (!_messageKeys.containsKey(doc.id)) {
+                      _messageKeys[doc.id] = GlobalKey();
+                    }
 
                     if (isSystem) {
                       return Center(
+                        key: _messageKeys[doc.id],
                         child: Container(
                           margin: const EdgeInsets.symmetric(vertical: 8),
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -247,6 +409,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     }
 
                     return Align(
+                      key: _messageKeys[doc.id],
                       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -268,30 +431,60 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                                   padding: const EdgeInsets.only(left: 4, bottom: 2),
                                   child: Text(senderName, style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
                                 ),
-                              Container(
-                                margin: const EdgeInsets.only(bottom: 4),
-                                padding: type == 'image'
-                                    ? const EdgeInsets.all(4)
-                                    : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                constraints: const BoxConstraints(maxWidth: 260),
-                                decoration: BoxDecoration(
-                                  color: isMe ? Colors.orange : Theme.of(context).cardColor,
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: type == 'image'
-                                    ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(14),
-                                  child: Image.network(
-                                    imageUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                              GestureDetector(
+                                onLongPress: () => _showMessageOptions(doc.id, data),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 500),
+                                  margin: const EdgeInsets.only(bottom: 4),
+                                  padding: type == 'image'
+                                      ? const EdgeInsets.all(4)
+                                      : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  constraints: const BoxConstraints(maxWidth: 260),
+                                  decoration: BoxDecoration(
+                                    color: _highlightedMessageId == doc.id
+                                        ? Colors.orange.withOpacity(0.3)
+                                        : (isMe ? Colors.orange : Theme.of(context).cardColor),
+                                    borderRadius: BorderRadius.circular(18),
                                   ),
-                                )
-                                    : Text(
-                                  text,
-                                  style: TextStyle(
-                                    color: isMe ? Colors.white : Theme.of(context).textTheme.bodyMedium?.color,
-                                    fontSize: 15,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (replyTo != null)
+                                        GestureDetector(
+                                          onTap: () => _scrollToMessage(replyTo['messageId']),
+                                          child: Container(
+                                            margin: const EdgeInsets.only(bottom: 8),
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withOpacity(0.1),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(replyTo['senderName'] ?? '', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange)),
+                                                Text(replyTo['text'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      type == 'image'
+                                          ? ClipRRect(
+                                              borderRadius: BorderRadius.circular(14),
+                                              child: Image.network(
+                                                imageUrl,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image),
+                                              ),
+                                            )
+                                          : Text(
+                                              text,
+                                              style: TextStyle(
+                                                color: isMe ? Colors.white : Theme.of(context).textTheme.bodyMedium?.color,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -325,6 +518,28 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             const Padding(
               padding: EdgeInsets.all(8.0),
               child: LinearProgressIndicator(color: Colors.orange),
+            ),
+          if (_replyMessage != null)
+            Container(
+              padding: const EdgeInsets.all(12),
+              color: Theme.of(context).cardColor,
+              child: Row(
+                children: [
+                  const Icon(Icons.reply, color: Colors.orange),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Replying to ${_replyMessage!['senderName']}\n${_replyMessage!['text']}",
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => setState(() => _replyMessage = null),
+                  ),
+                ],
+              ),
             ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
