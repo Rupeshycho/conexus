@@ -1,3 +1,5 @@
+import 'package:conexus/view/followers_list.dart';
+import 'package:conexus/view/following_list.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'edit_profile.dart';
@@ -187,8 +189,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   buildStat("142", "Posts"),
-                  buildStat("12.8k", "Followers"),
-                  buildStat("482", "Following"),
+
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FollowersList(
+                            followers: [],
+                          ),
+                        ),
+                      );
+                    },
+                    child: buildStat("12.8k", "Followers"),
+                  ),
+
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FollowingList(
+                            following: [],
+                          ),
+                        ),
+                      );
+                    },
+                    child: buildStat("482", "Following"),
+                  ),
                 ],
               ),
 
