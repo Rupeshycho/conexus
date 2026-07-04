@@ -14,12 +14,6 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  int counter =0;
-  void counterIncreament(){
-    setState(() {
-      counter++;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
