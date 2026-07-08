@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "1069485922735",
+    "project_id": "conexus-b9d4b",
+    "storage_bucket": "conexus-b9d4b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1069485922735:android:6476f78bd15adb3427375a",
+        "android_client_info": {
+          "package_name": "com.example.conexus"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1069485922735-0mang2uq1ni2t8gngl4qvlcan3v39h5p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCHfSgfZcRLLIjw8SiD6cHdeerYe81u5tE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1069485922735-0mang2uq1ni2t8gngl4qvlcan3v39h5p.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1069485922735-p6r2jl29tqklq4nk54t1sp0uecghvung.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.conexus"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
