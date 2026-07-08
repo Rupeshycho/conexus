@@ -26,6 +26,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - Assets/Image/profile_pic.png
-    - assets/images/img.png
-    - assets/images/Conexus.logo.png
+    - assets/
+    - assets/images
+

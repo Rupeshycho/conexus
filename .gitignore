@@ -7,6 +7,15 @@
 .buildlog/
 .history
 
+# IDE
+.idea/
+
+# Platform-specific (if you REALLY don't want them)
+android/
+ios/
+windows/
+linux/
+web/
 
 
 # Flutter repo-specific
