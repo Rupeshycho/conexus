@@ -1,8 +1,11 @@
 // File: home_screen.dart (NOT home_feed.dart)
 import 'package:flutter/material.dart';
+import 'home_feed.dart';
 import 'search_screen.dart';
 
-
+void main(){
+  runApp(HomeScreen());
+}
 class HomeScreen extends StatefulWidget {  // Changed from HomeFeed
   const HomeScreen({super.key});
 
@@ -59,12 +62,12 @@ class _HomeScreenState extends State<HomeScreen> {  // Changed
       ),
       body: IndexedStack(
         index: selectedIndex,
-        children: [
-          Center(child: Text(screenNames[0])),
-          const SearchScreen(),
-          Center(child: Text(screenNames[2])),
-          Center(child: Text(screenNames[3])),
-          Center(child: Text(screenNames[4])),
+        children: const [
+          HomeFeed(),
+          SearchScreen(),
+          Center(child: Text("Add Posts/Reels")),
+          Center(child: Text("View Reels")),
+          Center(child: Text("Chats")),
         ],
       ),
       bottomNavigationBar: BottomAppBar(

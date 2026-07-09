@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
 
-void main(){
-  runApp(const HomeFeed());
-}
 class HomeFeed extends StatelessWidget {
   const HomeFeed({super.key});
 
