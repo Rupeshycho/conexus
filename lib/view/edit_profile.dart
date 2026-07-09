@@ -1,9 +1,9 @@
 import 'dart:io';
+
+import 'package:conexus/repo/image_repo.dart';
 import 'package:conexus/repo/image_repo_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
-import '../repo/image_repo.dart';
 
 class EditProfile extends StatefulWidget {
   final String currentName;
@@ -41,15 +41,17 @@ class _EditProfileState extends State<EditProfile> {
     super.initState();
 
     nameController = TextEditingController(text: widget.currentName);
-    usernameController = TextEditingController(text: widget.currentUsername);
+    usernameController =
+        TextEditingController(text: widget.currentUsername);
     bioController = TextEditingController(text: widget.currentBio);
 
     uploadedImageUrl = widget.currentImageUrl;
   }
 
-  Future<void> pickImage() async {
+  Future<void> pickImage(ImageSource source) async {
     final pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
+      source: source,
+      imageQuality: 80,
     );
 
     if (pickedFile != null) {
@@ -57,6 +59,59 @@ class _EditProfileState extends State<EditProfile> {
         profileImage = File(pickedFile.path);
       });
     }
+  }
+
+  void showImagePickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(20),
+        ),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(
+                  child: Text(
+                    "Choose Profile Picture",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.camera_alt,
+                  color: Colors.deepOrange,
+                ),
+                title: const Text("Camera"),
+                onTap: () {
+                  Navigator.pop(context);
+                  pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.photo_library,
+                  color: Colors.deepOrange,
+                ),
+                title: const Text("Gallery"),
+                onTap: () {
+                  Navigator.pop(context);
+                  pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<String> uploadImageIfNeeded() async {
@@ -113,39 +168,31 @@ class _EditProfileState extends State<EditProfile> {
           children: [
             const SizedBox(height: 20),
 
-            Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                GestureDetector(
-                  onTap: pickImage,
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.deepOrange,
-                    backgroundImage: profileImage != null
-                        ? FileImage(profileImage!)
-                        : (uploadedImageUrl != null &&
-                        uploadedImageUrl!.isNotEmpty)
-                        ? NetworkImage(uploadedImageUrl!)
-                    as ImageProvider
-                        : null,
-                    child: (profileImage == null &&
-                        (uploadedImageUrl == null ||
-                            uploadedImageUrl!.isEmpty))
-                        ? const Icon(
-                      Icons.person,
-                      color: Colors.white,
-                      size: 50,
-                    )
-                        : null,
-                  ),
-                ),
-              ],
+            CircleAvatar(
+              radius: 50,
+              backgroundColor: Colors.deepOrange,
+              backgroundImage: profileImage != null
+                  ? FileImage(profileImage!)
+                  : (uploadedImageUrl != null &&
+                  uploadedImageUrl!.isNotEmpty)
+                  ? NetworkImage(uploadedImageUrl!)
+              as ImageProvider
+                  : null,
+              child: (profileImage == null &&
+                  (uploadedImageUrl == null ||
+                      uploadedImageUrl!.isEmpty))
+                  ? const Icon(
+                Icons.person,
+                color: Colors.white,
+                size: 50,
+              )
+                  : null,
             ),
 
             const SizedBox(height: 12),
 
             TextButton.icon(
-              onPressed: pickImage,
+              onPressed: showImagePickerOptions,
               icon: const Icon(
                 Icons.photo_library,
                 color: Colors.deepOrange,
