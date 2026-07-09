@@ -20,6 +20,7 @@ dependencies:
   cloudinary: ^1.2.2
   get_it: ^9.2.1
   cloudinary_public: ^0.23.1
+  video_player: ^2.11.1
 
 
 dev_dependencies:
