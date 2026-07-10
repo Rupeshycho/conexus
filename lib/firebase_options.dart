@@ -25,13 +25,19 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        return macos;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for macos - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.windows:
-        return windows;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for windows - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
-              'you can reconfigure this by running the FlutterFire CLI again.',
+          'you can reconfigure this by running the FlutterFire CLI again.',
         );
       default:
         throw UnsupportedError(
@@ -64,25 +70,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1069485922735',
     projectId: 'conexus-b9d4b',
     storageBucket: 'conexus-b9d4b.firebasestorage.app',
+    iosClientId: '1069485922735-p6r2jl29tqklq4nk54t1sp0uecghvung.apps.googleusercontent.com',
     iosBundleId: 'com.example.conexus',
-  );
-
-  static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDcgfPFiIIfePlfE-OoPu1kqo5qfs6tsxM',
-    appId: '1:1069485922735:ios:107f69c4b7303ce727375a',
-    messagingSenderId: '1069485922735',
-    projectId: 'conexus-b9d4b',
-    storageBucket: 'conexus-b9d4b.firebasestorage.app',
-    iosBundleId: 'com.example.conexus',
-  );
-
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyA8Zg8POGkVJuOsJY2_JPmqw2Y6yX-Dy5Y',
-    appId: '1:1069485922735:web:e231738e30056e5927375a',
-    messagingSenderId: '1069485922735',
-    projectId: 'conexus-b9d4b',
-    authDomain: 'conexus-b9d4b.firebaseapp.com',
-    storageBucket: 'conexus-b9d4b.firebasestorage.app',
-    measurementId: 'G-TWMF1YGQR9',
   );
 }
