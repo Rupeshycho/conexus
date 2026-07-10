@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'video_call_screen.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class IncomingCallDialog extends StatefulWidget {
   final String callId;
+  final String callerId;
   final String callerName;
   final String callerImage;
   final bool isVideo;
@@ -13,6 +15,7 @@ class IncomingCallDialog extends StatefulWidget {
   const IncomingCallDialog({
     super.key,
     required this.callId,
+    required this.callerId,
     required this.callerName,
     required this.callerImage,
     required this.isVideo,
@@ -92,6 +95,7 @@ class _IncomingCallDialogState extends State<IncomingCallDialog> {
               isVideoEnabled: widget.isVideo,
               callId: widget.callId,
               isIncoming: true,
+              receiverId: widget.callerId,
             ),
           ),
         );
