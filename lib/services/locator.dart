@@ -10,7 +10,11 @@ import '../viewmodel/suggested_users_viewmodel.dart';
 final locator = GetIt.instance;
 
 void setupLocator() {
+  // No CloudinaryService registration needed — it's fully static now,
+  // called directly as CloudinaryService.uploadImage(...) wherever needed.
+
   locator.registerLazySingleton<PostRepo>(() => PostRepoImpl());
+
   locator.registerLazySingleton<UserRepo>(() => UserRepoImpl());
 
   locator.registerFactory<HomeFeedViewModel>(

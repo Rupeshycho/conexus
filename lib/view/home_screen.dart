@@ -1,20 +1,21 @@
-// File: home_screen.dart (NOT home_feed.dart)
 import 'package:flutter/material.dart';
 import 'home_feed.dart';
 import 'search_screen.dart';
+import 'widgets/story_row.dart';
 
-void main(){
-  runApp(HomeScreen());
-}
-class HomeScreen extends StatefulWidget {  // Changed from HomeFeed
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();  // Changed
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {  // Changed
+class _HomeScreenState extends State<HomeScreen> {
   int selectedIndex = 0;
+
+  // TODO: replace with your real logged-in user's uid + photoUrl
+  final String currentUserId = 'CURRENT_USER_ID';
+  final String currentUserPhotoUrl = '';
 
   final List<String> screenNames = [
     "Home Feed ",
@@ -34,10 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {  // Changed
           padding: const EdgeInsets.all(8.0),
           child: CircleAvatar(
             backgroundColor: Colors.orange.shade100,
-            child: const Icon(
-              Icons.person,
-              color: Colors.black,
-            ),
+            child: const Icon(Icons.person, color: Colors.black),
           ),
         ),
         title: const Text(
@@ -52,22 +50,31 @@ class _HomeScreenState extends State<HomeScreen> {  // Changed
         actions: [
           IconButton(
             onPressed: () {},
-            icon: const Icon(
-              Icons.notifications_none,
-              color: Colors.orange,
-              size: 30,
-            ),
+            icon: const Icon(Icons.notifications_none, color: Colors.orange, size: 30),
           ),
         ],
       ),
-      body: IndexedStack(
-        index: selectedIndex,
-        children: const [
-          HomeFeed(),
-          SearchScreen(),
-          Center(child: Text("Add Posts/Reels")),
-          Center(child: Text("View Reels")),
-          Center(child: Text("Chats")),
+      body: Column(
+        children: [
+          // ── Story row: only makes sense on the Home tab ──
+          if (selectedIndex == 0)
+            StoryRow(
+              currentUserId: currentUserId,
+              currentUserPhotoUrl: currentUserPhotoUrl,
+            ),
+
+          Expanded(
+            child: IndexedStack(
+              index: selectedIndex,
+              children: const [
+                HomeFeed(),
+                SearchScreen(),
+                Center(child: Text("Add Posts/Reels")),
+                Center(child: Text("View Reels")),
+                Center(child: Text("Chats")),
+              ],
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: BottomAppBar(
@@ -97,18 +104,11 @@ class _HomeScreenState extends State<HomeScreen> {  // Changed
   }) {
     bool isSelected = selectedIndex == index;
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedIndex = index;
-        });
-      },
+      onTap: () => setState(() => selectedIndex = index),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            icon,
-            color: isSelected ? Colors.orange : Colors.grey,
-          ),
+          Icon(icon, color: isSelected ? Colors.orange : Colors.grey),
           Text(
             label,
             style: TextStyle(

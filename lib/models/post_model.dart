@@ -1,4 +1,3 @@
-// lib/models/post_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum PostType { text, image, video }
@@ -9,11 +8,13 @@ class PostModel {
   final String authorUsername;
   final String authorPhotoUrl;
   final PostType type;
-  final String? mediaUrl;      // Cloudinary URL — null for text posts
+  final String? mediaUrl;
   final String caption;
-  final DateTime createdAt;
   final int likeCount;
   final int commentCount;
+  final DateTime createdAt;
+  final bool isLiked;
+  final bool isSaved;
 
   PostModel({
     required this.postId,
@@ -22,10 +23,12 @@ class PostModel {
     required this.authorPhotoUrl,
     required this.type,
     this.mediaUrl,
-    required this.caption,
-    required this.createdAt,
+    this.caption = '',
     this.likeCount = 0,
     this.commentCount = 0,
+    required this.createdAt,
+    this.isLiked = false,
+    this.isSaved = false,
   });
 
   factory PostModel.fromFirestore(DocumentSnapshot doc) {
@@ -36,14 +39,16 @@ class PostModel {
       authorUsername: data['authorUsername'] ?? '',
       authorPhotoUrl: data['authorPhotoUrl'] ?? '',
       type: PostType.values.firstWhere(
-            (e) => e.name == data['type'],
+            (e) => e.toString() == data['type'],
         orElse: () => PostType.text,
       ),
       mediaUrl: data['mediaUrl'],
       caption: data['caption'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       likeCount: data['likeCount'] ?? 0,
       commentCount: data['commentCount'] ?? 0,
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      isLiked: data['isLiked'] ?? false,
+      isSaved: data['isSaved'] ?? false,
     );
   }
 
@@ -52,12 +57,42 @@ class PostModel {
       'authorId': authorId,
       'authorUsername': authorUsername,
       'authorPhotoUrl': authorPhotoUrl,
-      'type': type.name,
+      'type': type.toString(),
       'mediaUrl': mediaUrl,
       'caption': caption,
-      'createdAt': FieldValue.serverTimestamp(),
       'likeCount': likeCount,
       'commentCount': commentCount,
+      'createdAt': Timestamp.fromDate(createdAt),
     };
+  }
+
+  PostModel copyWith({
+    String? postId,
+    String? authorId,
+    String? authorUsername,
+    String? authorPhotoUrl,
+    PostType? type,
+    String? mediaUrl,
+    String? caption,
+    int? likeCount,
+    int? commentCount,
+    DateTime? createdAt,
+    bool? isLiked,
+    bool? isSaved,
+  }) {
+    return PostModel(
+      postId: postId ?? this.postId,
+      authorId: authorId ?? this.authorId,
+      authorUsername: authorUsername ?? this.authorUsername,
+      authorPhotoUrl: authorPhotoUrl ?? this.authorPhotoUrl,
+      type: type ?? this.type,
+      mediaUrl: mediaUrl ?? this.mediaUrl,
+      caption: caption ?? this.caption,
+      likeCount: likeCount ?? this.likeCount,
+      commentCount: commentCount ?? this.commentCount,
+      createdAt: createdAt ?? this.createdAt,
+      isLiked: isLiked ?? this.isLiked,
+      isSaved: isSaved ?? this.isSaved,
+    );
   }
 }
