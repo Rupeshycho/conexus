@@ -1,12 +1,20 @@
+// lib/repo/comment_repo_impl.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/comment_model.dart';
+import '../models/notification_model.dart';
 import 'comment_repo.dart';
+import 'notification_repo.dart';
 
 class CommentRepoImpl implements CommentRepo {
   final FirebaseFirestore _firestore;
+  final NotificationRepo _notificationRepo;
 
-  CommentRepoImpl({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  CommentRepoImpl({
+    required NotificationRepo notificationRepo,
+    FirebaseFirestore? firestore,
+  }) : _notificationRepo = notificationRepo,
+       _firestore = firestore ?? FirebaseFirestore.instance;
 
   @override
   Stream<List<CommentModel>> getComments(String postId) {
@@ -14,10 +22,13 @@ class CommentRepoImpl implements CommentRepo {
         .collection('posts')
         .doc(postId)
         .collection('comments')
-        .orderBy('createdAt', descending: true)
+        .orderBy('createdAt', descending: false) // oldest first, like Instagram
         .snapshots()
-        .map((snapshot) =>
-        snapshot.docs.map((doc) => CommentModel.fromFirestore(doc)).toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => CommentModel.fromFirestore(doc, postId))
+              .toList(),
+        );
   }
 
   @override
@@ -27,6 +38,7 @@ class CommentRepoImpl implements CommentRepo {
     required String authorUsername,
     required String authorPhotoUrl,
     required String text,
+    required String postOwnerId,
   }) async {
     final comment = CommentModel(
       commentId: '',
@@ -38,79 +50,28 @@ class CommentRepoImpl implements CommentRepo {
       createdAt: DateTime.now(),
     );
 
+    // 1. Save the comment itself
     await _firestore
         .collection('posts')
         .doc(postId)
         .collection('comments')
         .add(comment.toMap());
 
-    // Increment comment count on post
+    // 2. Bump the post's commentCount
     await _firestore.collection('posts').doc(postId).update({
       'commentCount': FieldValue.increment(1),
     });
-  }
 
-  @override
-  Future<void> deleteComment(String commentId, String userId) async {
-    // Find which post this comment belongs to
-    final querySnapshot = await _firestore
-        .collectionGroup('comments')
-        .where(FieldPath.documentId, isEqualTo: commentId)
-        .get();
-
-    if (querySnapshot.docs.isNotEmpty) {
-      final doc = querySnapshot.docs.first;
-      final postId = doc.data()['postId'];
-
-      // Check if user is authorized
-      if (doc.data()['authorId'] == userId) {
-        await doc.reference.delete();
-
-        // Decrement comment count
-        await _firestore.collection('posts').doc(postId).update({
-          'commentCount': FieldValue.increment(-1),
-        });
-      } else {
-        throw Exception('Not authorized to delete this comment');
-      }
+    // 3. Notify the post owner (skip notifying yourself if you comment on your own post)
+    if (postOwnerId != authorId) {
+      await _notificationRepo.createNotification(
+        type: NotificationType.comment,
+        postId: postId,
+        fromUserId: authorId,
+        fromUsername: authorUsername,
+        fromUserPhotoUrl: authorPhotoUrl,
+        toUserId: postOwnerId,
+      );
     }
-  }
-
-  @override
-  Future<void> toggleLikeComment(String commentId, String userId) async {
-    // Find the comment
-    final querySnapshot = await _firestore
-        .collectionGroup('comments')
-        .where(FieldPath.documentId, isEqualTo: commentId)
-        .get();
-
-    if (querySnapshot.docs.isNotEmpty) {
-      final doc = querySnapshot.docs.first;
-      final likeRef = doc.reference.collection('likes').doc(userId);
-
-      final likeDoc = await likeRef.get();
-      if (likeDoc.exists) {
-        await likeRef.delete();
-        await doc.reference.update({
-          'likeCount': FieldValue.increment(-1),
-        });
-      } else {
-        await likeRef.set({'userId': userId, 'createdAt': FieldValue.serverTimestamp()});
-        await doc.reference.update({
-          'likeCount': FieldValue.increment(1),
-        });
-      }
-    }
-  }
-
-  @override
-  Future<int> getCommentCount(String postId) async {
-    final snapshot = await _firestore
-        .collection('posts')
-        .doc(postId)
-        .collection('comments')
-        .count()
-        .get();
-    return snapshot.count;
   }
 }
