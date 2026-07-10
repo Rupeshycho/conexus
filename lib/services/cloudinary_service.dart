@@ -6,9 +6,9 @@ class CloudinaryService {
   static const String cloudName = "di3lnc0c3";
   static const String uploadPreset = "conexus_upload";
 
-  static Future<String?> uploadImage(File file) async {
+  static Future<String?> uploadFile(File file, {required String resourceType}) async {
     final uri = Uri.parse(
-      "https://api.cloudinary.com/v1_1/$cloudName/image/upload",
+      "https://api.cloudinary.com/v1_1/$cloudName/$resourceType/upload",
     );
 
     var request = http.MultipartRequest("POST", uri);
@@ -31,5 +31,13 @@ class CloudinaryService {
     }
 
     return null;
+  }
+
+  static Future<String?> uploadImage(File file) async {
+    return uploadFile(file, resourceType: "image");
+  }
+
+  static Future<String?> uploadVideo(File file) async {
+    return uploadFile(file, resourceType: "video");
   }
 }
