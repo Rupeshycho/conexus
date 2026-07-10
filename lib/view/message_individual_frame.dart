@@ -5,6 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:conexus/viewmodel/user_view_model.dart';
 import 'package:conexus/model/user_model.dart';
 import 'package:conexus/services/cloudinary_service.dart';
@@ -38,11 +41,10 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController messageController = TextEditingController();
   final ScrollController scrollController = ScrollController();
   final ImagePicker _picker = ImagePicker();
-  bool _isUploadingImage = false;
+  bool _isUploading = false;
   Timer? _typingTimer;
   Map<String, dynamic>? _replyMessage;
   
-  // Track message keys for jump-to-message feature
   final Map<String, GlobalKey> _messageKeys = {};
   String? _highlightedMessageId;
 
@@ -72,7 +74,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void sendMessage({String? text, String? imageUrl, String type = 'text', bool isForwarded = false}) async {
     final msgText = text ?? messageController.text.trim();
-    if (msgText.isEmpty && imageUrl == null) return;
+    if (msgText.isEmpty && imageUrl == null && type != 'call') return;
 
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     if (currentUserId.isEmpty) return;
@@ -114,12 +116,18 @@ class _ChatScreenState extends State<ChatScreen> {
       'replyTo': replyData,
     });
 
+    String lastMsgDisplay = msgText;
+    if (type == 'image') lastMsgDisplay = '📷 Image';
+    else if (type == 'video') lastMsgDisplay = '🎥 Video';
+    else if (type == 'file') lastMsgDisplay = '📁 $msgText';
+    else if (isForwarded) lastMsgDisplay = 'Forwarded: $msgText';
+
     await FirebaseFirestore.instance
         .collection('chat_rooms')
         .doc(chatRoomId)
         .set({
       'participants': [currentUserId, widget.receiverId],
-      'lastMessage': type == 'image' ? '📷 Image' : (isForwarded ? 'Forwarded: $msgText' : msgText),
+      'lastMessage': lastMsgDisplay,
       'lastMessageSenderId': currentUserId,
       'lastMessageTime': now,
       'names': {
@@ -140,7 +148,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
     if (image == null) return;
 
-    setState(() => _isUploadingImage = true);
+    setState(() => _isUploading = true);
 
     try {
       final file = File(image.path);
@@ -155,9 +163,116 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Image Error: $e')));
     } finally {
-      if (mounted) setState(() => _isUploadingImage = false);
+      if (mounted) setState(() => _isUploading = false);
     }
   }
+
+  Future<void> _pickAndSendVideo() async {
+    final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+    if (video == null) return;
+
+    setState(() => _isUploading = true);
+
+    try {
+      final file = File(video.path);
+      final downloadUrl = await CloudinaryService.uploadVideo(file);
+
+      if (downloadUrl != null) {
+        sendMessage(text: '', imageUrl: downloadUrl, type: 'video');
+      } else {
+        throw Exception("Upload failed");
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Video Error: $e')));
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  Future<void> _pickAndSendFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles();
+      if (result == null || result.files.single.path == null) return;
+
+      setState(() => _isUploading = true);
+
+      final filePath = result.files.single.path!;
+      final fileName = result.files.single.name;
+      final file = File(filePath);
+
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('chat_files')
+          .child('${DateTime.now().millisecondsSinceEpoch}_$fileName');
+
+      final uploadTask = ref.putFile(file);
+      final snapshot = await uploadTask.whenComplete(() {});
+
+      if (snapshot.state == TaskState.success) {
+        final downloadUrl = await ref.getDownloadURL();
+        sendMessage(text: fileName, imageUrl: downloadUrl, type: 'file');
+      } else {
+        throw Exception("File upload failed");
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('File Error: $e')));
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  void _showAttachmentOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.orange),
+                title: const Text('Camera'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAndSendImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.orange),
+                title: const Text('Gallery (Photo)'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAndSendImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.video_library, color: Colors.orange),
+                title: const Text('Video'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAndSendVideo();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.insert_drive_file, color: Colors.orange),
+                title: const Text('Document / File'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAndSendFile();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
 
   void _showMessageOptions(String docId, Map<String, dynamic> data) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -196,9 +311,16 @@ class _ChatScreenState extends State<ChatScreen> {
                   setState(() {
                     _replyMessage = {
                       'messageId': docId,
-                      'text': data['type'] == 'image' ? '📷 Image' : (data['text'] ?? ''),
+                      'text': data['type'] == 'image'
+                          ? '📷 Image'
+                          : (data['type'] == 'video'
+                              ? '🎥 Video'
+                              : (data['type'] == 'file'
+                                  ? '📁 ${data['text']}'
+                                  : (data['text'] ?? ''))),
                       'senderName': isMe ? 'You' : widget.username,
                     };
+
                   });
                 },
               ),
@@ -366,6 +488,7 @@ class _ChatScreenState extends State<ChatScreen> {
             isVideoEnabled: isVideo,
             callId: callId,
             isIncoming: false,
+            receiverId: widget.receiverId,
           ),
         ),
       );
@@ -435,8 +558,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     final data = doc.data() as Map<String, dynamic>;
                     final isMe = data['senderId'] == currentUserId;
                     final replyTo = data['replyTo'] as Map<String, dynamic>?;
+                    final reactions = data['reactions'] as Map<String, dynamic>?;
                     
-                    // Assign key for jumping
                     if (!_messageKeys.containsKey(doc.id)) {
                       _messageKeys[doc.id] = GlobalKey();
                     }
@@ -444,45 +567,48 @@ class _ChatScreenState extends State<ChatScreen> {
                     return Align(
                       key: _messageKeys[doc.id],
                       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: GestureDetector(
-                        onLongPress: () => _showMessageOptions(doc.id, data),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 500),
-                          padding: data['type'] == 'image'
-                              ? const EdgeInsets.all(4)
-                              : const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _highlightedMessageId == doc.id 
-                                ? Colors.orange.withOpacity(0.3)
-                                : (isMe ? Colors.orange : Theme.of(context).cardColor),
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          constraints: const BoxConstraints(maxWidth: 280),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (replyTo != null)
-                                GestureDetector(
-                                  onTap: () => _scrollToMessage(replyTo['messageId']),
-                                  child: Container(
-                                    margin: const EdgeInsets.only(bottom: 8),
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(10),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          GestureDetector(
+                            onLongPress: () => _showMessageOptions(doc.id, data),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 500),
+                              padding: (data['type'] == 'image' || data['type'] == 'video')
+                                  ? const EdgeInsets.all(4)
+                                  : const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: _highlightedMessageId == doc.id 
+                                    ? Colors.orange.withOpacity(0.3)
+                                    : (isMe ? Colors.orange : Theme.of(context).cardColor),
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              constraints: const BoxConstraints(maxWidth: 280),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (replyTo != null)
+                                    GestureDetector(
+                                      onTap: () => _scrollToMessage(replyTo['messageId']),
+                                      child: Container(
+                                        margin: const EdgeInsets.only(bottom: 8),
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(replyTo['senderName'] ?? '', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange)),
+                                            Text(replyTo['text'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                                          ],
+                                        ),
+                                      ),
                                     ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(replyTo['senderName'] ?? '', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange)),
-                                        Text(replyTo['text'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              data['type'] == 'image'
-                                  ? ClipRRect(
+                                  if (data['type'] == 'image')
+                                    ClipRRect(
                                       borderRadius: BorderRadius.circular(14),
                                       child: Image.network(
                                         data['imageUrl'] ?? '',
@@ -490,10 +616,138 @@ class _ChatScreenState extends State<ChatScreen> {
                                         errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image),
                                       ),
                                     )
-                                  : Text(data['text'] ?? '', style: TextStyle(color: isMe ? Colors.white : null)),
-                            ],
+                                  else if (data['type'] == 'video')
+                                    InkWell(
+                                      onTap: () async {
+                                        final url = data['imageUrl'] ?? '';
+                                        if (url.isNotEmpty) {
+                                          final uri = Uri.parse(url);
+                                          if (await canLaunchUrl(uri)) {
+                                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                          }
+                                        }
+                                      },
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(14),
+                                          color: Colors.black12,
+                                        ),
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            const Icon(Icons.video_library, size: 100, color: Colors.orange),
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                              child: const Icon(Icons.play_arrow, size: 30, color: Colors.white),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                  else if (data['type'] == 'call')
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          data['text'] == 'Missed Call' ? Icons.call_missed : Icons.call_made,
+                                          color: data['text'] == 'Missed Call' ? Colors.red : Colors.grey,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          data['text'] ?? '',
+                                          style: TextStyle(
+                                            color: data['text'] == 'Missed Call' ? Colors.red : (isMe ? Colors.white : null),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  else if (data['type'] == 'file')
+                                    InkWell(
+                                      onTap: () async {
+                                        final url = data['imageUrl'] ?? '';
+                                        if (url.isNotEmpty) {
+                                          final uri = Uri.parse(url);
+                                          if (await canLaunchUrl(uri)) {
+                                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                          } else {
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text('Could not open file URL')),
+                                              );
+                                            }
+                                          }
+                                        }
+                                      },
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(0.2),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              Icons.insert_drive_file,
+                                              color: isMe ? Colors.white : Colors.orange,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Flexible(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  data['text'] ?? 'File',
+                                                  style: TextStyle(
+                                                    color: isMe ? Colors.white : null,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                Text(
+                                                  'Tap to open',
+                                                  style: TextStyle(
+                                                    color: isMe ? Colors.white70 : Colors.black54,
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  else
+                                    Text(data['text'] ?? '', style: TextStyle(color: isMe ? Colors.white : null)),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
+                          if (reactions != null && reactions.isNotEmpty)
+                            Positioned(
+                              bottom: -4,
+                              right: isMe ? null : 10,
+                              left: isMe ? 10 : null,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).cardColor,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, spreadRadius: 1)
+                                  ],
+                                ),
+                                child: Text(
+                                  reactions.values.toSet().join(''),
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     );
                   },
@@ -516,6 +770,26 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
             
+          if (_isUploading)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: Colors.grey.withOpacity(0.1),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    "Uploading attachment...",
+                    style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
@@ -524,7 +798,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: TextField(
                     controller: messageController,
                     onChanged: _onTyping,
-                    decoration: InputDecoration(hintText: "Type message...", border: OutlineInputBorder(borderRadius: BorderRadius.circular(30))),
+                    decoration: InputDecoration(
+                      hintText: "Type message...",
+                      prefixIcon: IconButton(
+                        icon: const Icon(Icons.add, color: Colors.orange),
+                        onPressed: _showAttachmentOptions,
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+                    ),
                   ),
                 ),
                 IconButton(icon: const Icon(Icons.send, color: Colors.orange), onPressed: () => sendMessage()),
