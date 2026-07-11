@@ -19,14 +19,13 @@ class CommentRepoImpl implements CommentRepo {
   @override
   Stream<List<CommentModel>> getComments(String postId) {
     return _firestore
-        .collection('posts')
-        .doc(postId)
         .collection('comments')
-        .orderBy('createdAt', descending: false) // oldest first, like Instagram
+        .where('postId', isEqualTo: postId)
+        .orderBy('createdAt', descending: false)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-              .map((doc) => CommentModel.fromFirestore(doc, postId))
+              .map((doc) => CommentModel.fromFirestore(doc))
               .toList(),
         );
   }
@@ -38,7 +37,6 @@ class CommentRepoImpl implements CommentRepo {
     required String authorUsername,
     required String authorPhotoUrl,
     required String text,
-    required String postOwnerId,
   }) async {
     final comment = CommentModel(
       commentId: '',
@@ -50,20 +48,19 @@ class CommentRepoImpl implements CommentRepo {
       createdAt: DateTime.now(),
     );
 
-    // 1. Save the comment itself
-    await _firestore
-        .collection('posts')
-        .doc(postId)
-        .collection('comments')
-        .add(comment.toMap());
+    // 1. Save the comment in the top-level collection
+    await _firestore.collection('comments').add(comment.toMap());
 
     // 2. Bump the post's commentCount
-    await _firestore.collection('posts').doc(postId).update({
-      'commentCount': FieldValue.increment(1),
-    });
+    final postRef = _firestore.collection('posts').doc(postId);
+    await postRef.update({'commentCount': FieldValue.increment(1)});
 
-    // 3. Notify the post owner (skip notifying yourself if you comment on your own post)
-    if (postOwnerId != authorId) {
+    // 3. Notify the post owner (unless commenting on your own post)
+    final postSnap = await postRef.get();
+    final postOwnerId =
+        (postSnap.data() as Map<String, dynamic>?)?['authorId'] as String?;
+
+    if (postOwnerId != null && postOwnerId != authorId) {
       await _notificationRepo.createNotification(
         type: NotificationType.comment,
         postId: postId,
@@ -73,5 +70,52 @@ class CommentRepoImpl implements CommentRepo {
         toUserId: postOwnerId,
       );
     }
+  }
+
+  @override
+  Future<void> deleteComment(String commentId, String userId) async {
+    final commentRef = _firestore.collection('comments').doc(commentId);
+    final snap = await commentRef.get();
+    final data = snap.data() as Map<String, dynamic>?;
+
+    if (data == null) return;
+
+    // Only the comment's author can delete it
+    if (data['authorId'] != userId) {
+      throw Exception('You can only delete your own comments');
+    }
+
+    final postId = data['postId'] as String;
+
+    await commentRef.delete();
+
+    await _firestore.collection('posts').doc(postId).update({
+      'commentCount': FieldValue.increment(-1),
+    });
+  }
+
+  @override
+  Future<void> toggleLikeComment(String commentId, String userId) async {
+    final commentRef = _firestore.collection('comments').doc(commentId);
+    final snap = await commentRef.get();
+    final data = snap.data() as Map<String, dynamic>?;
+    final likedBy = List<String>.from(data?['likedBy'] ?? []);
+
+    if (likedBy.contains(userId)) {
+      await commentRef.update({
+        'likedBy': FieldValue.arrayRemove([userId]),
+      });
+    } else {
+      await commentRef.update({
+        'likedBy': FieldValue.arrayUnion([userId]),
+      });
+    }
+  }
+
+  @override
+  Future<int> getCommentCount(String postId) async {
+    final postSnap = await _firestore.collection('posts').doc(postId).get();
+    final data = postSnap.data() as Map<String, dynamic>?;
+    return data?['commentCount'] ?? 0;
   }
 }

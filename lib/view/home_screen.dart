@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'home_feed.dart';
 import 'search_screen.dart';
 import 'widgets/story_row.dart';
@@ -50,7 +51,11 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             onPressed: () {},
-            icon: const Icon(Icons.notifications_none, color: Colors.orange, size: 30),
+            icon: const Icon(
+              Icons.notifications_none,
+              color: Colors.orange,
+              size: 30,
+            ),
           ),
         ],
       ),
@@ -89,7 +94,11 @@ class _HomeScreenState extends State<HomeScreen> {
               navItem(icon: Icons.search, label: "SEARCH", index: 1),
               navItem(icon: Icons.add_box_outlined, label: "CREATE", index: 2),
               navItem(icon: Icons.video_collection, label: "REELS", index: 3),
-              navItem(icon: Icons.chat_bubble_outline, label: "CHATS", index: 4),
+              navItem(
+                icon: Icons.chat_bubble_outline,
+                label: "CHATS",
+                index: 4,
+              ),
             ],
           ),
         ),

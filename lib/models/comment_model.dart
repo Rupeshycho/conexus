@@ -9,6 +9,7 @@ class CommentModel {
   final String authorPhotoUrl;
   final String text;
   final DateTime createdAt;
+  final List<String> likedBy;
 
   CommentModel({
     required this.commentId,
@@ -18,28 +19,36 @@ class CommentModel {
     required this.authorPhotoUrl,
     required this.text,
     required this.createdAt,
+    this.likedBy = const [],
   });
 
-  factory CommentModel.fromFirestore(DocumentSnapshot doc, String postId) {
+  int get likeCount => likedBy.length;
+  bool isLikedBy(String userId) => likedBy.contains(userId);
+
+  // No longer needs postId passed in separately — it's stored in the doc itself
+  factory CommentModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return CommentModel(
       commentId: doc.id,
-      postId: postId,
+      postId: data['postId'] ?? '',
       authorId: data['authorId'] ?? '',
       authorUsername: data['authorUsername'] ?? '',
       authorPhotoUrl: data['authorPhotoUrl'] ?? '',
       text: data['text'] ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      likedBy: List<String>.from(data['likedBy'] ?? []),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'postId': postId,
       'authorId': authorId,
       'authorUsername': authorUsername,
       'authorPhotoUrl': authorPhotoUrl,
       'text': text,
       'createdAt': FieldValue.serverTimestamp(),
+      'likedBy': likedBy,
     };
   }
 }
