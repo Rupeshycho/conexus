@@ -3,7 +3,7 @@ class UserModel {
   final String name;
   final String username;
   final String bio;
-  final String profileImageUrl;
+  final String profileImage;
   final List<String> followers;
   final List<String> following;
 
@@ -12,7 +12,7 @@ class UserModel {
     required this.name,
     required this.username,
     required this.bio,
-    required this.profileImageUrl,
+    required this.profileImage,
     required this.followers,
     required this.following,
   });
@@ -23,7 +23,7 @@ class UserModel {
       "name": name,
       "username": username,
       "bio": bio,
-      "profileImageUrl": profileImageUrl,
+      "profileImage": profileImage,
       "followers": followers,
       "following": following,
     };
@@ -35,7 +35,7 @@ class UserModel {
       name: map["name"] ?? "",
       username: map["username"] ?? "",
       bio: map["bio"] ?? "",
-      profileImageUrl: map["profileImageUrl"] ?? "",
+      profileImage: map["profileImage"] ?? "",
       followers: List<String>.from(map["followers"] ?? []),
       following: List<String>.from(map["following"] ?? []),
     );
