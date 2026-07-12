@@ -6,6 +6,10 @@
 *.swp
 .buildlog/
 .history
+.metadata
+analysis_options.yaml
+conexus.iml
+firebase.json
 
 # IDE
 .idea/
