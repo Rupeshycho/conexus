@@ -51,5 +51,21 @@ void main() {
       expect(post.likeCount, 5);
       expect(post.commentCount, 2);
     });
+    test(
+      'fromFirestore defaults type to text when field is missing/invalid',
+      () async {
+        final firestore = FakeFirebaseFirestore();
+        final docRef = await firestore.collection('posts').add({
+          'authorId': 'u1',
+          'caption': 'no type field',
+          'createdAt': Timestamp.now(),
+        });
+
+        final snapshot = await docRef.get();
+        final post = PostModel.fromFirestore(snapshot);
+
+        expect(post.type, PostType.text);
+      },
+    );
   });
 }
