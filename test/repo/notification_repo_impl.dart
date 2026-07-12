@@ -56,5 +56,23 @@ void main() {
         expect(result.first.toUserId, 'u2');
       },
     );
+
+    test('markAsRead sets isRead to true', () async {
+      final docRef = await firestore.collection('notifications').add({
+        'type': 'comment',
+        'postId': 'p1',
+        'fromUserId': 'u1',
+        'fromUsername': 'a',
+        'fromUserPhotoUrl': '',
+        'toUserId': 'u2',
+        'isRead': false,
+        'createdAt': DateTime.now(),
+      });
+
+      await repo.markAsRead(docRef.id);
+
+      final snap = await docRef.get();
+      expect(snap['isRead'], isTrue);
+    });
   });
 }
