@@ -1,9 +1,11 @@
 import 'dart:io';
 
-import 'package:conexus/repo/image_repo.dart';
-import 'package:conexus/repo/image_repo_impl.dart';
+import 'package:conexus/model/user_model.dart';
+import 'package:conexus/viewmodel/image_view_model.dart';
+import 'package:conexus/viewmodel/user_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 class EditProfile extends StatefulWidget {
   final String currentName;
@@ -28,36 +30,25 @@ class _EditProfileState extends State<EditProfile> {
   late TextEditingController usernameController;
   late TextEditingController bioController;
 
-  File? profileImage;
-  String? uploadedImageUrl;
-
   bool isLoading = false;
-
-  final ImagePicker picker = ImagePicker();
-  final ImageRepo imageRepo = ImageRepoImpl();
+  String imageUrl = "";
 
   @override
   void initState() {
     super.initState();
 
     nameController = TextEditingController(text: widget.currentName);
-    usernameController =
-        TextEditingController(text: widget.currentUsername);
+    usernameController = TextEditingController(text: widget.currentUsername);
     bioController = TextEditingController(text: widget.currentBio);
-
-    uploadedImageUrl = widget.currentImageUrl;
+    imageUrl = widget.currentImageUrl;
   }
 
-  Future<void> pickImage(ImageSource source) async {
-    final pickedFile = await picker.pickImage(
-      source: source,
-      imageQuality: 80,
-    );
+  Future<void> chooseImage(ImageSource source) async {
+    final imageVM = context.read<ImageViewModel>();
+    await imageVM.pickImage(source);
 
-    if (pickedFile != null) {
-      setState(() {
-        profileImage = File(pickedFile.path);
-      });
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -65,11 +56,9 @@ class _EditProfileState extends State<EditProfile> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(20),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
+      builder: (_) {
         return SafeArea(
           child: Wrap(
             children: [
@@ -78,33 +67,24 @@ class _EditProfileState extends State<EditProfile> {
                 child: Center(
                   child: Text(
                     "Choose Profile Picture",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
               ListTile(
-                leading: const Icon(
-                  Icons.camera_alt,
-                  color: Colors.deepOrange,
-                ),
+                leading: const Icon(Icons.camera_alt, color: Colors.deepOrange),
                 title: const Text("Camera"),
                 onTap: () {
                   Navigator.pop(context);
-                  pickImage(ImageSource.camera);
+                  chooseImage(ImageSource.camera);
                 },
               ),
               ListTile(
-                leading: const Icon(
-                  Icons.photo_library,
-                  color: Colors.deepOrange,
-                ),
+                leading: const Icon(Icons.photo_library, color: Colors.deepOrange),
                 title: const Text("Gallery"),
                 onTap: () {
                   Navigator.pop(context);
-                  pickImage(ImageSource.gallery);
+                  chooseImage(ImageSource.gallery);
                 },
               ),
             ],
@@ -114,13 +94,59 @@ class _EditProfileState extends State<EditProfile> {
     );
   }
 
-  Future<String> uploadImageIfNeeded() async {
-    if (profileImage == null) {
-      return uploadedImageUrl ?? "";
+  Future<void> saveProfile() async {
+    setState(() => isLoading = true);
+
+    final imageVM = context.read<ImageViewModel>();
+    final userVM = context.read<UserViewModel>();
+
+    String finalImageUrl = imageUrl;
+
+    if (imageVM.selectedImage != null) {
+      finalImageUrl = await imageVM.uploadImage();
     }
 
-    final url = await imageRepo.uploadImage(profileImage!);
-    return url;
+    final currentUser = userVM.currentUser;
+
+    if (currentUser == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Unable to load user.")),
+        );
+      }
+      setState(() => isLoading = false);
+      return;
+    }
+
+    final updatedUser = UserModel(
+      uid: currentUser.uid,
+      name: nameController.text.trim().isEmpty
+          ? currentUser.name
+          : nameController.text.trim(),
+      username: usernameController.text.trim().isEmpty
+          ? currentUser.username
+          : usernameController.text.trim(),
+      bio: bioController.text.trim().isEmpty
+          ? currentUser.bio
+          : bioController.text.trim(),
+      profileImage: finalImageUrl.isEmpty ? currentUser.profileImage : finalImageUrl,
+      followers: currentUser.followers,
+      following: currentUser.following,
+    );
+
+    await userVM.updateProfile(updatedUser);
+
+    if (!mounted) return;
+
+    imageVM.clearImage();
+    setState(() => isLoading = false);
+
+    Navigator.pop(context, {
+      "name": updatedUser.name,
+      "username": updatedUser.username,
+      "bio": updatedUser.bio,
+      "profileImageUrl": updatedUser.profileImage,
+    });
   }
 
   @override
@@ -142,16 +168,16 @@ class _EditProfileState extends State<EditProfile> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(
-          color: Colors.deepOrange,
-          width: 2,
-        ),
+        borderSide: const BorderSide(color: Colors.deepOrange, width: 2),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final imageVM = context.watch<ImageViewModel>();
+    File? profileImage = imageVM.selectedImage;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8F8),
       appBar: AppBar(
@@ -172,20 +198,12 @@ class _EditProfileState extends State<EditProfile> {
               radius: 50,
               backgroundColor: Colors.deepOrange,
               backgroundImage: profileImage != null
-                  ? FileImage(profileImage!)
-                  : (uploadedImageUrl != null &&
-                  uploadedImageUrl!.isNotEmpty)
-                  ? NetworkImage(uploadedImageUrl!)
-              as ImageProvider
+                  ? FileImage(profileImage)
+                  : imageUrl.isNotEmpty
+                  ? NetworkImage(imageUrl)
                   : null,
-              child: (profileImage == null &&
-                  (uploadedImageUrl == null ||
-                      uploadedImageUrl!.isEmpty))
-                  ? const Icon(
-                Icons.person,
-                color: Colors.white,
-                size: 50,
-              )
+              child: profileImage == null && imageUrl.isEmpty
+                  ? const Icon(Icons.person, color: Colors.white, size: 50)
                   : null,
             ),
 
@@ -193,16 +211,10 @@ class _EditProfileState extends State<EditProfile> {
 
             TextButton.icon(
               onPressed: showImagePickerOptions,
-              icon: const Icon(
-                Icons.photo_library,
-                color: Colors.deepOrange,
-              ),
+              icon: const Icon(Icons.photo_library, color: Colors.deepOrange),
               label: const Text(
                 "Change Profile Picture",
-                style: TextStyle(
-                  color: Colors.deepOrange,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w600),
               ),
             ),
 
@@ -234,26 +246,7 @@ class _EditProfileState extends State<EditProfile> {
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed: () async {
-                  setState(() => isLoading = true);
-
-                  final imageUrl = await uploadImageIfNeeded();
-
-                  if (!context.mounted) return;
-
-                  final result = {
-                    "name": nameController.text,
-                    "username": usernameController.text,
-                    "bio": bioController.text,
-                    "profileImageUrl": imageUrl,
-                  };
-
-                  setState(() => isLoading = false);
-
-                  if (!context.mounted) return;
-
-                  Navigator.of(context).pop(result);
-                },
+                onPressed: isLoading ? null : saveProfile,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepOrange,
                   shape: RoundedRectangleBorder(
