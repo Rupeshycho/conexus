@@ -68,5 +68,28 @@ void main() {
         expect(postSnap['commentCount'], 1);
       },
     );
+    test(
+      'addComment triggers a notification when commenting on someone else\'s post',
+      () async {
+        final postRef = await firestore.collection('posts').add({
+          'authorId': 'owner1',
+          'commentCount': 0,
+        });
+
+        await repo.addComment(
+          postId: postRef.id,
+          authorId: 'commenter1',
+          authorUsername: 'jack',
+          authorPhotoUrl: '',
+          text: 'nice!',
+        );
+
+        expect(fakeNotificationRepo.createdNotifications.length, 1);
+        expect(
+          fakeNotificationRepo.createdNotifications.first['toUserId'],
+          'owner1',
+        );
+      },
+    );
   });
 }
