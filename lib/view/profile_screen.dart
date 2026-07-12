@@ -1,9 +1,12 @@
+import 'package:conexus/model/user_model.dart';
 import 'package:conexus/view/followers_list.dart';
 import 'package:conexus/view/following_list.dart';
+import 'package:conexus/view/share_profile.dart';
+import 'package:conexus/view/edit_profile.dart';
+import 'package:conexus/view/notifications_screen.dart';
+import 'package:conexus/viewmodel/user_view_model.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'edit_profile.dart';
-import 'share_profile.dart';
+import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -13,62 +16,86 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  String name = "Sandip Rawal";
-  String username = "@creative_sandip";
+  UserModel? user;
+  bool isLoading = true;
 
-  String bio =
-      "Visual Storyteller & Motion Designer.\n"
-      "Creating digital experiences that pulse with energy.";
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadProfile();
+    });
+  }
 
-  String? profileImageUrl; // ✅ Cloudinary image URL (NOT File anymore)
+  Future<void> loadProfile() async {
+    final vm = context.read<UserViewModel>();
 
-  final ImagePicker picker = ImagePicker();
+    await vm.loadCurrentUser();
 
-  Future<void> pickImage() async {
-    final pickedFile =
-    await picker.pickImage(source: ImageSource.gallery);
+    if (!mounted) return;
 
-    if (pickedFile != null) {
-      // ❌ DO NOT store File anymore (Cloudinary will handle upload in EditProfile)
-      // just open edit screen or ignore here
-    }
+    setState(() {
+      user = vm.currentUser;
+      isLoading = false;
+    });
   }
 
   Future<void> openEditProfile() async {
+    if (user == null) return;
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => EditProfile(
-          currentName: name,
-          currentUsername: username,
-          currentBio: bio,
-          currentImageUrl: profileImageUrl ?? "",
+          currentName: user!.name,
+          currentUsername: user!.username,
+          currentBio: user!.bio,
+          currentImageUrl: user!.profileImage,
         ),
       ),
     );
 
-    if (!mounted) return;
-
-    if (result != null) {
+    if (result != null && mounted) {
       setState(() {
-        name = result["name"] ?? name;
-        username = result["username"] ?? username;
-        bio = result["bio"] ?? bio;
-
-        // ✅ Cloudinary URL from EditProfile
-        profileImageUrl = result["profileImageUrl"];
+        user = UserModel(
+          uid: user!.uid,
+          name: result["name"] ?? user!.name,
+          username: result["username"] ?? user!.username,
+          bio: result["bio"] ?? user!.bio,
+          profileImage: result["profileImageUrl"] ?? user!.profileImage,
+          followers: user!.followers,
+          following: user!.following,
+        );
       });
+    } else {
+      await loadProfile();
     }
   }
 
   void openShareProfile() {
+    if (user == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ShareProfileScreen(
-          name: name,
-          username: username,
-          bio: bio,
+          name: user!.name,
+          username: user!.username,
+          bio: user!.bio,
+        ),
+      ),
+    );
+  }
+
+  void openProfileImageViewer() {
+    if (user == null || user!.profileImage.isEmpty) {
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _ProfileImageViewer(
+          imageUrl: user!.profileImage,
         ),
       ),
     );
@@ -76,6 +103,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Colors.deepOrange,
+          ),
+        ),
+      );
+    }
+
+    if (user == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text("User not found"),
+        ),
+      );
+    }
+
     return DefaultTabController(
       length: 1,
       child: Scaffold(
@@ -92,17 +137,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          leading: const Icon(
-            Icons.menu,
-            color: Colors.grey,
-          ),
-          actions: const [
-            Padding(
-              padding: EdgeInsets.only(right: 15),
-              child: Icon(
-                Icons.chat_bubble_outline,
-                color: Colors.deepOrange,
-              ),
+          // ❌ Menu icon REMOVED
+          leading: null,
+          actions: [
+            // Notification Bell Icon
+            Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.deepOrange,
+                    size: 28,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -133,28 +201,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     Positioned(
                       bottom: -55,
-                      child: CircleAvatar(
-                        radius: 58,
-                        backgroundColor: Colors.white,
+                      child: GestureDetector(
+                        onTap: openProfileImageViewer,
                         child: CircleAvatar(
-                          radius: 54,
-                          backgroundColor: Colors.orange.shade100,
+                          radius: 58,
+                          backgroundColor: Colors.white,
                           child: CircleAvatar(
                             radius: 54,
-                            backgroundImage:
-                            (profileImageUrl != null &&
-                                profileImageUrl!.isNotEmpty)
-                                ? NetworkImage(profileImageUrl!)
-                                : null,
+                            backgroundColor: Colors.orange.shade100,
+                            child: CircleAvatar(
+                              radius: 54,
+                              backgroundImage:
+                              user!.profileImage.isNotEmpty
+                                  ? NetworkImage(user!.profileImage)
+                                  : null,
 
-                            child: (profileImageUrl == null ||
-                                profileImageUrl!.isEmpty)
-                                ? const Icon(
-                              Icons.person,
-                              size: 60,
-                              color: Colors.deepOrange,
-                            )
-                                : null,
+                              child: user!.profileImage.isEmpty
+                                  ? const Icon(
+                                Icons.person,
+                                size: 60,
+                                color: Colors.deepOrange,
+                              )
+                                  : null,
+                            ),
                           ),
                         ),
                       ),
@@ -166,7 +235,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 70),
 
               Text(
-                name,
+                user!.name.isEmpty ? "No Name" : user!.name,
                 style: const TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
@@ -176,7 +245,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 5),
 
               Text(
-                username,
+                user!.username.isEmpty
+                    ? "@username"
+                    : "@${user!.username.replaceAll("@", "")}",
                 style: const TextStyle(
                   color: Colors.deepOrange,
                   fontSize: 16,
@@ -195,13 +266,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const FollowersList(
-                            followers: [],
+                          builder: (_) => FollowersList(
+                            followers: user!.followers,
                           ),
                         ),
                       );
                     },
-                    child: buildStat("12.8k", "Followers"),
+                    child: buildStat(
+                      user!.followers.length.toString(),
+                      "Followers",
+                    ),
                   ),
 
                   GestureDetector(
@@ -209,13 +283,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const FollowingList(
-                            following: [],
+                          builder: (_) => FollowingList(
+                            following: user!.following,
                           ),
                         ),
                       );
                     },
-                    child: buildStat("482", "Following"),
+                    child: buildStat(
+                      user!.following.length.toString(),
+                      "Following",
+                    ),
                   ),
                 ],
               ),
@@ -225,7 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 30),
                 child: Text(
-                  bio,
+                  user!.bio.isEmpty ? "No Bio Yet" : user!.bio,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.black54,
@@ -355,6 +432,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+class _ProfileImageViewer extends StatelessWidget {
+  final String imageUrl;
+
+  const _ProfileImageViewer({required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: InteractiveViewer(
+              minScale: 0.8,
+              maxScale: 5,
+              child: Center(
+                child: Hero(
+                  tag: "profileImage",
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: Colors.deepOrange,
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.broken_image,
+                        color: Colors.white54,
+                        size: 60,
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          Positioned(
+            top: 40,
+            right: 20,
+            child: SafeArea(
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Colors.black45,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
