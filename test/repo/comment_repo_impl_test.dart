@@ -91,5 +91,24 @@ void main() {
         );
       },
     );
+    test(
+      'addComment does NOT notify when commenting on your own post',
+      () async {
+        final postRef = await firestore.collection('posts').add({
+          'authorId': 'owner1',
+          'commentCount': 0,
+        });
+
+        await repo.addComment(
+          postId: postRef.id,
+          authorId: 'owner1', // same as post author
+          authorUsername: 'owner1',
+          authorPhotoUrl: '',
+          text: 'my own comment',
+        );
+
+        expect(fakeNotificationRepo.createdNotifications, isEmpty);
+      },
+    );
   });
 }
