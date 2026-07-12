@@ -125,5 +125,27 @@ void main() {
       snap = await commentRef.get();
       expect(List<String>.from(snap['likedBy']), isNot(contains('u2')));
     });
+    test(
+      'deleteComment removes the comment and decrements commentCount',
+      () async {
+        final postRef = await firestore.collection('posts').add({
+          'authorId': 'owner1',
+          'commentCount': 1,
+        });
+        final commentRef = await firestore.collection('comments').add({
+          'postId': postRef.id,
+          'authorId': 'commenter1',
+          'text': 'delete me',
+        });
+
+        await repo.deleteComment(commentRef.id, 'commenter1');
+
+        final snap = await commentRef.get();
+        expect(snap.exists, isFalse);
+
+        final postSnap = await postRef.get();
+        expect(postSnap['commentCount'], 0);
+      },
+    );
   });
 }
