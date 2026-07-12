@@ -2,23 +2,29 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'register.dart';
 import 'forgot_password.dart';
-import 'package:conexus/services/auth_service.dart';          // 👈 ADD THIS
+import 'package:conexus/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
+  final AuthService? authService; // 👈 optional, for testing
+
+  const LoginScreen({super.key, this.authService});
+
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState(authService: authService);
 }
 
 class _LoginScreenState extends State<LoginScreen> {
   bool visibility = true;
 
-  final AuthService _authService = AuthService();  // 👈 ADD THIS
+  final AuthService _authService;
+
+  _LoginScreenState({AuthService? authService})
+      : _authService = authService ?? AuthService();
 
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
 
   Future<void> loginUser() async {
-
     if (emailController.text.trim().isEmpty ||
         passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -28,7 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     try {
-      User? user = await _authService.login(   // 👈 USE AuthService
+      User? user = await _authService.login(
         emailController.text.trim().toLowerCase(),
         passwordController.text.trim(),
       );
@@ -37,13 +43,12 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) =>SignupScreen (), // 👈 your home screen name
+            builder: (context) => SignupScreen(), // 👈 your home screen name
           ),
         );
       }
-
     } on FirebaseAuthException catch (e) {
-      print("🔴 CODE: ${e.code}");             // 👈 CHECK THIS IN CONSOLE
+      print("🔴 CODE: ${e.code}");
       print("🔴 MSG: ${e.message}");
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -54,7 +59,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +95,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: Column(
                   children: [
-
                     Text(
                       "Welcome Back",
                       style: TextStyle(
@@ -234,8 +237,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     SizedBox(height: 20),
 
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Wrap(
+                      alignment: WrapAlignment.center,
                       children: [
                         Text(
                           "Don't have an account? ",
@@ -260,7 +263,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
-
                   ],
                 ),
               ),

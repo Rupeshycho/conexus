@@ -1,47 +1,36 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthService {
+  // 👇 Injectable FirebaseAuth instance. Defaults to the real one in production,
+  // but tests can pass in a MockFirebaseAuth / fake instance instead.
+  AuthService({FirebaseAuth? firebaseAuth})
+      : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseAuth _firebaseAuth;
 
-  // LOGIN
   Future<User?> login(String email, String password) async {
-    try {
-      UserCredential userCredential =
-      await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return userCredential.user;
-    } on FirebaseAuthException catch (e) {
-      print("🔴 AUTH CODE: ${e.code}");
-      print("🔴 AUTH MSG: ${e.message}");
-      rethrow;
-    }
+    final credential = await _firebaseAuth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    return credential.user;
   }
 
-  // REGISTER
   Future<User?> register(String email, String password) async {
-    try {
-      UserCredential userCredential =
-      await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return userCredential.user;
-    } on FirebaseAuthException catch (e) {
-      print("🔴 REGISTER CODE: ${e.code}");
-      rethrow;
-    }
+    final credential = await _firebaseAuth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    return credential.user;
   }
 
-  // LOGOUT
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _firebaseAuth.sendPasswordResetEmail(email: email);
+  }
+
   Future<void> logout() async {
-    await _auth.signOut();
+    await _firebaseAuth.signOut();
   }
 
-  // GET CURRENT USER
-  User? getCurrentUser() {
-    return _auth.currentUser;
-  }
+  User? get currentUser => _firebaseAuth.currentUser;
 }
