@@ -147,5 +147,20 @@ void main() {
         expect(postSnap['commentCount'], 0);
       },
     );
+    test(
+      'deleteComment throws if a different user tries to delete it',
+      () async {
+        final commentRef = await firestore.collection('comments').add({
+          'postId': 'p1',
+          'authorId': 'commenter1',
+          'text': 'not yours',
+        });
+
+        expect(
+          () => repo.deleteComment(commentRef.id, 'someone_else'),
+          throwsException,
+        );
+      },
+    );
   });
 }
