@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:conexus/services/settings_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class PersonalInfoScreen extends StatefulWidget {
   const PersonalInfoScreen({super.key});
@@ -27,11 +28,23 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   }
 
   Future<void> _loadInfo() async {
+    setState(() => isLoading = true);
+
+    // 1. Fetch data from your SettingsService
     final data = await _settingsService.getPersonalInfo();
+
+    // 2. Fallback to Firebase Auth if Firestore is empty
+    final currentUser = FirebaseAuth.instance.currentUser;
+
     if (!mounted) return;
+
     setState(() {
-      nameController.text = data?['name'] ?? '';
-      emailController.text = data?['email'] ?? '';
+      // Look for 'username' in Firestore. If missing, look for displayName in Auth.
+      nameController.text = data?['username'] ?? currentUser?.displayName ?? '';
+
+      // Look for 'email' in Firestore. If missing, look for email in Auth.
+      emailController.text = data?['email'] ?? currentUser?.email ?? '';
+
       isLoading = false;
     });
   }

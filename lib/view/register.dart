@@ -4,7 +4,10 @@ import 'login_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignupScreen extends StatefulWidget {
-  const SignupScreen({super.key});
+  final FirebaseAuth? firebaseAuth;
+  final FirebaseFirestore? firestore;
+
+  const SignupScreen({super.key, this.firebaseAuth, this.firestore});
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();
@@ -15,6 +18,18 @@ class _SignupScreenState extends State<SignupScreen> {
   bool hideConfirmPassword = true;
   bool isChecked = false;
 
+  late final FirebaseAuth _firebaseAuth;
+  late final FirebaseFirestore _firestore;
+
+  @override
+  void initState() {
+    super.initState();
+    _firebaseAuth = widget.firebaseAuth ?? FirebaseAuth.instance;
+    _firestore = widget.firestore ?? FirebaseFirestore.instance;
+  }
+
+  TextEditingController nameController =
+  TextEditingController();
 
   TextEditingController emailController =
   TextEditingController();
@@ -56,16 +71,17 @@ class _SignupScreenState extends State<SignupScreen> {
     }
 
     try {
-      UserCredential userCredential = await FirebaseAuth.instance
+      UserCredential userCredential = await _firebaseAuth
           .createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      await FirebaseFirestore.instance
+      await _firestore
           .collection("users")
           .doc(userCredential.user!.uid)
           .set({
+        "name": nameController.text.trim(),
         "email": emailController.text.trim(),
         "username": usernameController.text.trim(),
         "uid": userCredential.user!.uid,
@@ -191,6 +207,16 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                     ),
 
+
+                    const SizedBox(height: 18),
+
+                    buildLabel("Full Name"),
+
+                    buildTextField(
+                      controller: nameController,
+                      hint: "John Doe",
+                      icon: Icons.person_outline,
+                    ),
 
                     const SizedBox(height: 18),
 

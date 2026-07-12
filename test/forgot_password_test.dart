@@ -94,6 +94,8 @@ void main() {
     await tester.enterText(find.byType(TextField), 'test@example.com');
     await tester.tap(find.text('Send OTP'));
     await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).last, '000000');
     await tester.tap(find.text('Verify OTP'));

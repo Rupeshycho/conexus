@@ -1,9 +1,11 @@
+import 'package:conexus/view/change_password_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:conexus/services/settings_service.dart';
 import 'package:conexus/view/login_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:conexus/view/personal_info_screen.dart';
 import 'package:conexus/services/app_settings_provider.dart';
+import 'package:conexus/view/about_us_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -74,7 +76,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: Icons.lock_outline,
                   title: "Change Password",
                   onTap: () {
-                    // TODO: Navigate to Change Password screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ChangePasswordScreen()),
+                    );
                   },
                 ),
                 _divider(),
@@ -135,7 +140,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: Icons.info_outline,
                   title: "About Us",
                   onTap: () {
-                    // TODO: Navigate to About Us screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AboutUsScreen(),
+                      ),
+                    );
                   },
                 ),
               ]),
