@@ -110,5 +110,20 @@ void main() {
         expect(fakeNotificationRepo.createdNotifications, isEmpty);
       },
     );
+    test('toggleLikeComment adds then removes a like correctly', () async {
+      final commentRef = await firestore.collection('comments').add({
+        'postId': 'p1',
+        'authorId': 'a',
+        'likedBy': [],
+      });
+
+      await repo.toggleLikeComment(commentRef.id, 'u2');
+      var snap = await commentRef.get();
+      expect(List<String>.from(snap['likedBy']), contains('u2'));
+
+      await repo.toggleLikeComment(commentRef.id, 'u2'); // toggle off
+      snap = await commentRef.get();
+      expect(List<String>.from(snap['likedBy']), isNot(contains('u2')));
+    });
   });
 }
