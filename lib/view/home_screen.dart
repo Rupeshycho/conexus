@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'home_feed.dart';
 import 'search_screen.dart';
 import 'widgets/story_row.dart';
+import 'settings_screen.dart';
+import 'notification_screen.dart';
+
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -50,7 +54,26 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              // TODO: replace with your actual settings screen
+              // Navigator.push(
+              //   context,
+              //   MaterialPageRoute(builder: (context) => ),
+              // );
+            },
+            icon: const Icon(
+              Icons.settings_outlined,
+              color: Colors.orange,
+              size: 28,
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              // Navigator.push(
+              //   context,
+              //   MaterialPageRoute(builder: (context) => ),
+              // );
+            },
             icon: const Icon(
               Icons.notifications_none,
               color: Colors.orange,
