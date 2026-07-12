@@ -1,0 +1,9 @@
+<<<<<<< HEAD
+{"flutter":{"platforms":{"android":{"default":{"projectId":"conexus-b9d4b","appId":"1:1069485922735:android:c6015a0af7265a4627375a","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"conexus-b9d4b","configurations":{"android":"1:1069485922735:android:c6015a0af7265a4627375a","ios":"1:1069485922735:ios:386c24c63085a61d27375a","macos":"1:1069485922735:ios:386c24c63085a61d27375a","web":"1:1069485922735:web:9f6b9d841a77a85f27375a","windows":"1:1069485922735:web:ec6cc74c409da33227375a"}}}}}}
+=======
+<<<<<<< HEAD
+{"flutter":{"platforms":{"android":{"default":{"projectId":"conexus-b9d4b","appId":"1:1069485922735:android:6476f78bd15adb3427375a","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"conexus-b9d4b","configurations":{"android":"1:1069485922735:android:6476f78bd15adb3427375a","web":"1:1069485922735:web:9f6b9d841a77a85f27375a"}}}}}}
+=======
+{"flutter":{"platforms":{"android":{"default":{"projectId":"group-project-df1b3","appId":"1:557686259128:android:c3b29a4e7e1a3a4171234d","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"group-project-df1b3","configurations":{"android":"1:557686259128:android:c3b29a4e7e1a3a4171234d","ios":"1:557686259128:ios:1427e2706350a9e771234d","macos":"1:557686259128:ios:1427e2706350a9e771234d","web":"1:557686259128:web:1ff263ce2bab0faa71234d","windows":"1:557686259128:web:eba45e0b29dfca7c71234d"}}}}}}
+>>>>>>> Ashish_Branch
+>>>>>>> development
