@@ -1,20 +1,13 @@
 import 'dart:io';
-import 'package:cloudinary_public/cloudinary_public.dart';
-import 'image_repo.dart';
 
-class ImageRepoImpl implements ImageRepo {
-  final cloudinary = CloudinaryPublic(
-    "YOUR_CLOUD_NAME",
-    "YOUR_UPLOAD_PRESET",
-    cache: false,
-  );
+import 'package:conexus/repo/image_repo.dart';
+import 'package:conexus/services/cloudinary_service.dart';
+
+class ImageRepoImpl extends ImageRepo {
+  final CloudinaryService _cloudinaryService = CloudinaryService();
 
   @override
-  Future<String> uploadImage(File file) async {
-    final response = await cloudinary.uploadFile(
-      CloudinaryFile.fromFile(file.path),
-    );
-
-    return response.secureUrl;
+  Future<String> uploadProfileImage(File image) async {
+    return await _cloudinaryService.uploadImage(image);
   }
 }
