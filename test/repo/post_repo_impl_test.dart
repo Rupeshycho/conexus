@@ -1,10 +1,11 @@
+// test/repo/post_repo_impl_test.dart
 import 'package:conexus/repo/post_repo_impl.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late FakeFirebaseFirestore firestore;
-  late PostRepoImpl repo = PostRepoImpl(firestore: firestore);
+  late PostRepoImpl repo;
 
   setUp(() {
     firestore = FakeFirebaseFirestore();
@@ -48,5 +49,35 @@ void main() {
         'commentCount': 0,
       });
 
+      final posts = await repo.getFeed().first;
+
+      expect(posts.length, 2);
+      expect(posts.first.caption, 'newer'); // latest first
     });
+
+    test(
+      'markNotInterested writes under the user\'s notInterested subcollection',
+      () async {
+        await repo.markNotInterested('u1', 'post123');
+
+        final snap = await firestore
+            .collection('users')
+            .doc('u1')
+            .collection('notInterested')
+            .doc('post123')
+            .get();
+
+        expect(snap.exists, isTrue);
+      },
+    );
+
+    test('reportPost writes a report document with the given reason', () async {
+      await repo.reportPost('u1', 'post123', 'spam');
+
+      final snap = await firestore.collection('reports').get();
+      expect(snap.docs.length, 1);
+      expect(snap.docs.first['reason'], 'spam');
+      expect(snap.docs.first['postId'], 'post123');
+    });
+  });
 }
