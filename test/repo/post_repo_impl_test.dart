@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late FakeFirebaseFirestore firestore;
-  repo = PostRepoImpl(firestore: firestore);
+  late PostRepoImpl repo = PostRepoImpl(firestore: firestore);
 
   setUp(() {
     firestore = FakeFirebaseFirestore();
@@ -25,5 +25,28 @@ void main() {
       expect(snap.docs.first['type'], 'text');
       expect(snap.docs.first['caption'], 'hello');
     });
-  });
+
+    test('getFeed returns posts ordered by createdAt descending', () async {
+      await firestore.collection('posts').add({
+        'authorId': 'u1',
+        'authorUsername': 'a',
+        'authorPhotoUrl': '',
+        'type': 'text',
+        'caption': 'older',
+        'createdAt': DateTime(2026, 1, 1),
+        'likeCount': 0,
+        'commentCount': 0,
+      });
+      await firestore.collection('posts').add({
+        'authorId': 'u1',
+        'authorUsername': 'a',
+        'authorPhotoUrl': '',
+        'type': 'text',
+        'caption': 'newer',
+        'createdAt': DateTime(2026, 6, 1),
+        'likeCount': 0,
+        'commentCount': 0,
+      });
+
+    });
 }
