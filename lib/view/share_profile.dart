@@ -47,7 +47,6 @@ class ShareProfileScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // QR Code Section
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
@@ -56,6 +55,7 @@ class ShareProfileScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
+                      // ✅ FIX 1: Use withValues() instead of withOpacity
                       color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
@@ -98,13 +98,13 @@ class ShareProfileScreen extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // Copy Link Chip
               GestureDetector(
                 onTap: () => _copyLink(context),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
+                    // ✅ FIX 2: Use withValues() instead of withOpacity
                     color: Colors.deepOrange.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
                   ),
