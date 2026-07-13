@@ -1,10 +1,11 @@
 // lib/view/comment_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../repo/comment_repo.dart';
-import '../services/firebase_service.dart';
-import 'widgets/comment_tile.dart';
+import 'package:conexus/repo/comment_repo.dart';
+import 'package:conexus/services/firebase_service.dart';
+import 'package:conexus/widgets/comment_tile.dart';
 
 class CommentScreen extends StatefulWidget {
   final String postId;
@@ -19,6 +20,30 @@ class _CommentScreenState extends State<CommentScreen> {
   final _controller = TextEditingController();
   bool _isSending = false;
 
+  String _currentUsername = '';
+  String _currentUserPhotoUrl = '';
+  bool _profileLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUserProfile();
+  }
+
+  Future<void> _loadCurrentUserProfile() async {
+    final uid = FirebaseService.currentUserId;
+    if (uid == null) return;
+
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final data = doc.data();
+    if (!mounted) return;
+    setState(() {
+      _currentUsername = data?['username'] ?? 'User';
+      _currentUserPhotoUrl = data?['photoUrl'] ?? '';
+      _profileLoaded = true;
+    });
+  }
+
   Future<void> _sendComment() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
@@ -32,13 +57,13 @@ class _CommentScreenState extends State<CommentScreen> {
     await commentRepo.addComment(
       postId: widget.postId,
       authorId: currentUserId,
-      authorUsername: 'you', // TODO: replace with real profile username
-      authorPhotoUrl: '',
+      authorUsername: _currentUsername.isNotEmpty ? _currentUsername : 'User',
+      authorPhotoUrl: _currentUserPhotoUrl,
       text: text,
     );
 
     _controller.clear();
-    setState(() => _isSending = false);
+    if (mounted) setState(() => _isSending = false);
   }
 
   @override
@@ -68,6 +93,8 @@ class _CommentScreenState extends State<CommentScreen> {
                   itemBuilder: (context, index) => CommentTile(
                     comment: comments[index],
                     currentUserId: currentUserId,
+                    currentUsername: _currentUsername,
+                    currentUserPhotoUrl: _currentUserPhotoUrl,
                   ),
                 );
               },
@@ -94,12 +121,12 @@ class _CommentScreenState extends State<CommentScreen> {
                   IconButton(
                     icon: _isSending
                         ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                         : const Icon(Icons.send, color: Colors.orange),
-                    onPressed: _isSending ? null : _sendComment,
+                    onPressed: (_isSending || !_profileLoaded) ? null : _sendComment,
                   ),
                 ],
               ),
