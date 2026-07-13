@@ -1,6 +1,7 @@
 // lib/viewmodel/suggested_users_viewmodel.dart
+import 'package:conexus/model/user_model.dart';
 import 'package:flutter/foundation.dart';
-import '../models/user_model.dart';
+
 import '../repo/user_repo.dart';
 
 class SuggestedUsersViewModel extends ChangeNotifier {
