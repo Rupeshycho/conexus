@@ -1,36 +1,41 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthService {
-  // 👇 Injectable FirebaseAuth instance. Defaults to the real one in production,
-  // but tests can pass in a MockFirebaseAuth / fake instance instead.
-  AuthService({FirebaseAuth? firebaseAuth})
-      : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
 
-  final FirebaseAuth _firebaseAuth;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Future<User?> login(String email, String password) async {
-    final credential = await _firebaseAuth.signInWithEmailAndPassword(
+  // LOGIN
+  Future<User?> login(
+      String email,
+      String password,
+      ) async {
+
+    UserCredential userCredential =
+    await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,
     );
-    return credential.user;
+
+    return userCredential.user;
   }
 
-  Future<User?> register(String email, String password) async {
-    final credential = await _firebaseAuth.createUserWithEmailAndPassword(
+  // REGISTER
+  Future<User?> register(
+      String email,
+      String password,
+      ) async {
+
+    UserCredential userCredential =
+    await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
-    return credential.user;
+
+    return userCredential.user;
   }
 
-  Future<void> sendPasswordResetEmail(String email) async {
-    await _firebaseAuth.sendPasswordResetEmail(email: email);
-  }
-
+  // LOGOUT
   Future<void> logout() async {
-    await _firebaseAuth.signOut();
+    await _auth.signOut();
   }
-
-  User? get currentUser => _firebaseAuth.currentUser;
 }
