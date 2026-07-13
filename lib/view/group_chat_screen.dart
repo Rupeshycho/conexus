@@ -7,7 +7,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:conexus/viewmodel/user_view_model.dart';
-import 'video_call_screen.dart';
 
 class GroupChatScreen extends StatefulWidget {
   final String chatRoomId;
@@ -38,22 +37,29 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   final ScrollController scrollController = ScrollController();
   final ImagePicker _picker = ImagePicker();
   bool _isUploadingImage = false;
+  bool _isSendingMessage = false;
   Timer? _typingTimer;
+  bool _isTypingNotified = false;
   Map<String, dynamic>? _replyMessage;
   final Map<String, GlobalKey> _messageKeys = {};
   String? _highlightedMessageId;
 
+  // Tracks the doc count from the last snapshot so we only auto-scroll when
+  // a message is actually added/removed — not on every reaction, edit, or
+  // typing-status change that also comes through this stream's parent doc.
+  int _lastMessageCount = 0;
+
   void _scrollToMessage(String? messageId) {
     if (messageId == null || !_messageKeys.containsKey(messageId)) return;
-    
-    final context = _messageKeys[messageId]!.currentContext;
-    if (context != null) {
+
+    final ctx = _messageKeys[messageId]!.currentContext;
+    if (ctx != null) {
       Scrollable.ensureVisible(
-        context,
+        ctx,
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
-      
+
       setState(() => _highlightedMessageId = messageId);
       Timer(const Duration(seconds: 2), () {
         if (mounted) setState(() => _highlightedMessageId = null);
@@ -61,68 +67,71 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     }
   }
 
-  void sendMessage({String? text, String? imageUrl, String type = 'text'}) async {
+  Future<void> sendMessage({String? text, String? imageUrl, String type = 'text'}) async {
     final msgText = text ?? messageController.text.trim();
     if (msgText.isEmpty && imageUrl == null) return;
+    if (_isSendingMessage) return; // guard against double-tap / double-submit
 
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     if (currentUserId.isEmpty) return;
+
+    setState(() => _isSendingMessage = true);
 
     final viewModel = context.read<UserViewModel>();
     final senderName = viewModel.user?.name ?? FirebaseAuth.instance.currentUser?.email ?? 'User';
     final senderImage = viewModel.user?.profileImage ?? 'https://i.pravatar.cc/150?u=$currentUserId';
 
     final replyData = _replyMessage;
-    setState(() {
-      _replyMessage = null;
-    });
+    setState(() => _replyMessage = null);
 
     if (type == 'text') {
       messageController.clear();
     }
 
-    final now = FieldValue.serverTimestamp();
+    try {
+      final now = FieldValue.serverTimestamp();
 
-    final messageRef = FirebaseFirestore.instance
-        .collection('chat_rooms')
-        .doc(widget.chatRoomId)
-        .collection('messages')
-        .doc();
+      final messageRef = FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(widget.chatRoomId)
+          .collection('messages')
+          .doc();
 
-    await messageRef.set({
-      'text': msgText,
-      'imageUrl': imageUrl ?? '',
-      'type': type,
-      'status': 'sent',
-      'isEdited': false,
-      'senderId': currentUserId,
-      'senderName': senderName, // Groups need to display who sent it
-      'senderImage': senderImage,
-      'time': now,
-      'reactions': {},
-      'replyTo': replyData,
-    });
+      await messageRef.set({
+        'text': msgText,
+        'imageUrl': imageUrl ?? '',
+        'type': type,
+        'status': 'sent',
+        'isEdited': false,
+        'senderId': currentUserId,
+        'senderName': senderName, // Groups need to display who sent it
+        'senderImage': senderImage,
+        'time': now,
+        'reactions': {},
+        'replyTo': replyData,
+      });
 
-    // We don't update names and profile images here, just last message
-    await FirebaseFirestore.instance
-        .collection('chat_rooms')
-        .doc(widget.chatRoomId)
-        .set({
-      'lastMessage': type == 'image' ? '📷 Image' : '$senderName: $msgText',
-      'lastMessageSenderId': currentUserId,
-      'lastMessageTime': now,
-    }, SetOptions(merge: true));
+      // We don't update names and profile images here, just last message
+      await FirebaseFirestore.instance.collection('chat_rooms').doc(widget.chatRoomId).set({
+        'lastMessage': type == 'images' ? '📷 images' : '$senderName: $msgText',
+        'lastMessageSenderId': currentUserId,
+        'lastMessageTime': now,
+      }, SetOptions(merge: true));
+    } finally {
+      if (mounted) setState(() => _isSendingMessage = false);
+    }
 
+    if (!mounted) return;
     _scrollToBottom();
   }
 
   Future<void> _pickAndSendImage(ImageSource source) async {
+    if (_isUploadingImage) return;
+
     final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
     if (image == null) return;
 
-    setState(() {
-      _isUploadingImage = true;
-    });
+    setState(() => _isUploadingImage = true);
 
     try {
       final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -135,47 +144,62 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
       if (snapshot.state == TaskState.success) {
         final downloadUrl = await ref.getDownloadURL();
-        sendMessage(text: '', imageUrl: downloadUrl, type: 'image');
+        await sendMessage(text: '', imageUrl: downloadUrl, type: 'images');
       } else {
         throw Exception("Upload failed with state: ${snapshot.state}");
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Image Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('images Error: $e')));
     } finally {
-      if (mounted) {
-        setState(() {
-          _isUploadingImage = false;
-        });
-      }
+      if (mounted) setState(() => _isUploadingImage = false);
     }
+  }
+
+  void _setTypingStatus(String userId, bool isTyping) {
+    FirebaseFirestore.instance
+        .collection('chat_rooms')
+        .doc(widget.chatRoomId)
+        .update({'typing_status.$userId': isTyping}).catchError((_) {});
   }
 
   void _onTyping(String value) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     if (currentUserId.isEmpty) return;
 
-    FirebaseFirestore.instance.collection('chat_rooms').doc(widget.chatRoomId).update({
-      'typing_status.$currentUserId': true,
-    }).catchError((_) {});
+    if (value.isEmpty) {
+      // Field cleared — report "not typing" right away instead of waiting
+      // out the debounce window.
+      _typingTimer?.cancel();
+      if (_isTypingNotified) {
+        _isTypingNotified = false;
+        _setTypingStatus(currentUserId, false);
+      }
+      return;
+    }
+
+    // Only write "typing" once per burst, not on every keystroke — this was
+    // previously firing a Firestore update on every character typed.
+    if (!_isTypingNotified) {
+      _isTypingNotified = true;
+      _setTypingStatus(currentUserId, true);
+    }
 
     _typingTimer?.cancel();
     _typingTimer = Timer(const Duration(seconds: 2), () {
-      FirebaseFirestore.instance.collection('chat_rooms').doc(widget.chatRoomId).update({
-        'typing_status.$currentUserId': false,
-      }).catchError((_) {});
+      _isTypingNotified = false;
+      _setTypingStatus(currentUserId, false);
     });
   }
 
   void _scrollToBottom() {
     Future.delayed(const Duration(milliseconds: 200), () {
-      if (scrollController.hasClients) {
-        scrollController.animateTo(
-          scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
+      if (!mounted || !scrollController.hasClients) return;
+      scrollController.animateTo(
+        scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     });
   }
 
@@ -224,7 +248,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   setState(() {
                     _replyMessage = {
                       'messageId': docId,
-                      'text': data['type'] == 'image' ? '📷 Image' : (data['text'] ?? ''),
+                      'text': data['type'] == 'images' ? '📷 images' : (data['text'] ?? ''),
                       'senderName': isMe ? 'You' : senderName,
                     };
                   });
@@ -244,13 +268,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   leading: const Icon(Icons.delete, color: Colors.red),
                   title: const Text('Delete Message'),
                   onTap: () {
-                    FirebaseFirestore.instance
-                        .collection('chat_rooms')
-                        .doc(widget.chatRoomId)
-                        .collection('messages')
-                        .doc(docId)
-                        .delete();
                     Navigator.pop(context);
+                    _confirmDeleteMessage(docId);
                   },
                 ),
               const SizedBox(height: 8),
@@ -261,6 +280,34 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     );
   }
 
+  void _confirmDeleteMessage(String docId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete message?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              FirebaseFirestore.instance
+                  .collection('chat_rooms')
+                  .doc(widget.chatRoomId)
+                  .collection('messages')
+                  .doc(docId)
+                  .delete();
+              Navigator.pop(context);
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _reactToMessage(String docId, String emoji) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     FirebaseFirestore.instance
@@ -268,7 +315,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         .doc(widget.chatRoomId)
         .collection('messages')
         .doc(docId)
-        .set({'reactions': {currentUserId: emoji}}, SetOptions(merge: true));
+        .set({
+      'reactions': {currentUserId: emoji}
+    }, SetOptions(merge: true));
   }
 
   void _showEditDialog(String docId, String currentText) {
@@ -301,6 +350,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       },
     );
   }
+
   @override
   void dispose() {
     if (GroupChatScreen.activeChatRoomId == widget.chatRoomId) {
@@ -308,6 +358,18 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     }
 
     _typingTimer?.cancel();
+
+    // Best-effort: if we left while still "typing", clear the flag so other
+    // members don't see a stale typing indicator forever.
+    if (_isTypingNotified) {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+      if (currentUserId.isNotEmpty) {
+        FirebaseFirestore.instance
+            .collection('chat_rooms')
+            .doc(widget.chatRoomId)
+            .update({'typing_status.$currentUserId': false}).catchError((_) {});
+      }
+    }
 
     messageController.dispose();
     scrollController.dispose();
@@ -329,7 +391,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           children: [
             CircleAvatar(
               radius: 20,
-              backgroundImage: NetworkImage(widget.groupImage),
+              backgroundImage: widget.groupImage.isNotEmpty ? NetworkImage(widget.groupImage) : null,
+              onBackgroundImageError: widget.groupImage.isNotEmpty ? (_, __) {} : null,
+              child: widget.groupImage.isEmpty ? const Icon(Icons.group) : null,
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -366,7 +430,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
                 final docs = snapshot.data?.docs ?? [];
 
-                if (docs.isNotEmpty) {
+                // Only auto-scroll when the message count actually changed
+                // (new message sent/received, or one removed) — not on
+                // every snapshot update, so reactions/edits on messages
+                // above don't yank the view back down while someone is
+                // reading older messages.
+                if (docs.length != _lastMessageCount) {
+                  _lastMessageCount = docs.length;
                   WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
                 }
 
@@ -419,6 +489,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                             CircleAvatar(
                               radius: 14,
                               backgroundImage: senderImage.isNotEmpty ? NetworkImage(senderImage) : null,
+                              onBackgroundImageError: senderImage.isNotEmpty ? (_, __) {} : null,
                               child: senderImage.isEmpty ? const Icon(Icons.person, size: 14) : null,
                             ),
                             const SizedBox(width: 8),
@@ -436,13 +507,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 500),
                                   margin: const EdgeInsets.only(bottom: 4),
-                                  padding: type == 'image'
+                                  padding: type == 'images'
                                       ? const EdgeInsets.all(4)
                                       : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                   constraints: const BoxConstraints(maxWidth: 260),
                                   decoration: BoxDecoration(
                                     color: _highlightedMessageId == doc.id
-                                        ? Colors.orange.withOpacity(0.3)
+                                        ? Colors.orange.withValues(alpha: 0.3)
                                         : (isMe ? Colors.orange : Theme.of(context).cardColor),
                                     borderRadius: BorderRadius.circular(18),
                                   ),
@@ -456,34 +527,40 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                                             margin: const EdgeInsets.only(bottom: 8),
                                             padding: const EdgeInsets.all(8),
                                             decoration: BoxDecoration(
-                                              color: Colors.black.withOpacity(0.1),
+                                              color: Colors.black.withValues(alpha: 0.1),
                                               borderRadius: BorderRadius.circular(10),
                                             ),
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                Text(replyTo['senderName'] ?? '', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange)),
-                                                Text(replyTo['text'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                                                Text(replyTo['senderName'] ?? '',
+                                                    style: const TextStyle(
+                                                        fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange)),
+                                                Text(replyTo['text'] ?? '',
+                                                    maxLines: 2,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: const TextStyle(fontSize: 12)),
                                               ],
                                             ),
                                           ),
                                         ),
-                                      type == 'image'
+                                      type == 'images'
                                           ? ClipRRect(
-                                              borderRadius: BorderRadius.circular(14),
-                                              child: Image.network(
-                                                imageUrl,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image),
-                                              ),
-                                            )
+                                        borderRadius: BorderRadius.circular(14),
+                                        child: Image.network(
+                                          imageUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) =>
+                                          const Icon(Icons.broken_image),
+                                        ),
+                                      )
                                           : Text(
-                                              text,
-                                              style: TextStyle(
-                                                color: isMe ? Colors.white : Theme.of(context).textTheme.bodyMedium?.color,
-                                                fontSize: 15,
-                                              ),
-                                            ),
+                                        text,
+                                        style: TextStyle(
+                                          color: isMe ? Colors.white : Theme.of(context).textTheme.bodyMedium?.color,
+                                          fontSize: 15,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -494,7 +571,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     if (isEdited) ...[
-                                      Text('Edited', style: TextStyle(color: Colors.grey.shade500, fontSize: 10, fontStyle: FontStyle.italic)),
+                                      Text('Edited',
+                                          style: TextStyle(
+                                              color: Colors.grey.shade500, fontSize: 10, fontStyle: FontStyle.italic)),
                                       const SizedBox(width: 4),
                                     ],
                                     Text(
@@ -548,11 +627,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.attach_file, color: Colors.orange),
-                  onPressed: () => _pickAndSendImage(ImageSource.gallery),
+                  onPressed: _isUploadingImage ? null : () => _pickAndSendImage(ImageSource.gallery),
                 ),
                 IconButton(
                   icon: const Icon(Icons.camera_alt, color: Colors.orange),
-                  onPressed: () => _pickAndSendImage(ImageSource.camera),
+                  onPressed: _isUploadingImage ? null : () => _pickAndSendImage(ImageSource.camera),
                 ),
                 Expanded(
                   child: TextField(
@@ -574,12 +653,12 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 ),
                 const SizedBox(width: 10),
                 GestureDetector(
-                  onTap: () => sendMessage(),
+                  onTap: _isSendingMessage ? null : () => sendMessage(),
                   child: Container(
                     height: 52,
                     width: 52,
-                    decoration: const BoxDecoration(
-                      color: Colors.orange,
+                    decoration: BoxDecoration(
+                      color: _isSendingMessage ? Colors.orange.withValues(alpha: 0.5) : Colors.orange,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.send, color: Colors.white),
