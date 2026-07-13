@@ -56,7 +56,7 @@ class _SuggestedUserRowState extends State<SuggestedUserRow> {
           else
             ...viewModel.suggestedUsers.map(
               (user) =>
-                  _storyItem(label: user.username, photoUrl: user.photoUrl),
+                  _storyItem(label: user.name, photoUrl: user.profileImage),
             ),
         ],
       ),
