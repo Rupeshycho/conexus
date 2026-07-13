@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
+import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -81,12 +83,20 @@ class _SplashScreenState extends State<SplashScreen>
       _taglineController.forward();
     });
 
-    // Navigate to Login Screen
+    // After the intro delay, route based on whether a session is already
+    // persisted on-device — not unconditionally to Login. Firebase Auth
+    // restores currentUser from local storage automatically, so if the
+    // person logged in before and never logged out, this sends them
+    // straight to HomeScreen instead of asking them to log in again.
     Timer(const Duration(seconds: 4), () {
+      if (!mounted) return;
+      final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => LoginScreen(),
+          builder: (context) =>
+          isLoggedIn ? const HomeScreen() : LoginScreen(),
         ),
       );
     });
