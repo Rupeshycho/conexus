@@ -1,49 +1,70 @@
+// lib/models/notification_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum NotificationType { comment, like, follow }
+
 class NotificationModel {
-  final String id;
-  final String receiverId;
-  final String senderId;
-  final String type;
-  final String? postId;
-  final String message;
+  final String notificationId;
+  final NotificationType type;
+  final String postId;
+  final String fromUserId;
+  final String fromUsername;
+  final String fromUserPhotoUrl;
+  final String toUserId;
   final bool isRead;
-  final DateTime timestamp;
+  final DateTime createdAt;
 
   NotificationModel({
-    required this.id,
-    required this.receiverId,
-    required this.senderId,
+    required this.notificationId,
     required this.type,
-    this.postId,
-    required this.message,
+    required this.postId,
+    required this.fromUserId,
+    required this.fromUsername,
+    required this.fromUserPhotoUrl,
+    required this.toUserId,
     this.isRead = false,
-    required this.timestamp,
+    required this.createdAt,
   });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'receiverId': receiverId,
-      'senderId': senderId,
-      'type': type,
-      'postId': postId,
-      'message': message,
-      'isRead': isRead,
-      'timestamp': Timestamp.fromDate(timestamp),
-    };
-  }
 
   factory NotificationModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return NotificationModel(
-      id: doc.id,
-      receiverId: data['receiverId'] ?? '',
-      senderId: data['senderId'] ?? '',
-      type: data['type'] ?? '',
-      postId: data['postId'],
-      message: data['message'] ?? '',
+      notificationId: doc.id,
+      type: NotificationType.values.firstWhere(
+        (e) => e.name == data['type'],
+        orElse: () => NotificationType.comment,
+      ),
+      postId: data['postId'] ?? '',
+      fromUserId: data['fromUserId'] ?? '',
+      fromUsername: data['fromUsername'] ?? '',
+      fromUserPhotoUrl: data['fromUserPhotoUrl'] ?? '',
+      toUserId: data['toUserId'] ?? '',
       isRead: data['isRead'] ?? false,
-      timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'type': type.name,
+      'postId': postId,
+      'fromUserId': fromUserId,
+      'fromUsername': fromUsername,
+      'fromUserPhotoUrl': fromUserPhotoUrl,
+      'toUserId': toUserId,
+      'isRead': isRead,
+      'createdAt': FieldValue.serverTimestamp(),
+    };
+  }
+
+  String get message {
+    switch (type) {
+      case NotificationType.comment:
+        return '$fromUsername commented on your post';
+      case NotificationType.like:
+        return '$fromUsername liked your post';
+      case NotificationType.follow:
+        return '$fromUsername started following you';
+    }
   }
 }
