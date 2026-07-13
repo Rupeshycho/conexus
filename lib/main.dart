@@ -1,152 +1,221 @@
-import 'package:conexus/firebase_options.dart';
-import 'package:conexus/view/other_profile_screen.dart';
-import 'package:conexus/view/profile_screen.dart';
-import 'package:conexus/viewmodel/image_view_model.dart';
-import 'package:conexus/viewmodel/user_view_model.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_options.dart';
+
+// Repositories
+import 'package:conexus/repo/user_repo_impl.dart';
+import 'package:conexus/repo/notification_repo.dart';
+import 'package:conexus/repo/notification_repo_impl.dart';
+import 'package:conexus/repo/post_repo.dart';
+import 'package:conexus/repo/post_repo_impl.dart';
+import 'package:conexus/repo/comment_repo.dart';
+import 'package:conexus/repo/comment_repo_impl.dart';
+
+// ViewModels
+import 'package:conexus/viewmodel/user_view_model.dart';
+import 'package:conexus/viewmodel/theme_view_model.dart';
+import 'package:conexus/viewmodel/auth_viewmodel.dart';
+import 'package:conexus/viewmodel/notification_viewmodel.dart';
+import 'package:conexus/viewmodel/image_view_model.dart';
+import 'package:conexus/viewmodel/home_feed_viewmodel.dart';
+import 'package:conexus/viewmodel/suggested_users_viewmodel.dart';
+
+// Services
+import 'package:conexus/services/notification_service.dart';
+
+// Screens
+import 'package:conexus/view/login_screen.dart';
+import 'package:conexus/view/register.dart';
+import 'package:conexus/view/send_message.dart';
+import 'package:conexus/view/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 1. Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // ✅ Create test users for development
-  try {
-    await createTestUsers();
-    debugPrint("✅ Test users created successfully.");
-  } catch (e) {
-    debugPrint("⚠️ Could not create test users: $e");
-    debugPrint("ℹ️ The app will still work using fallback test user.");
-  }
+  // Explicit offline persistence config. Persistence is on by default on
+  // iOS/Android, but setting it explicitly here makes the behavior clear
+  // and lets us control cache size instead of relying on the default.
+  // Must run before any Firestore reads/writes happen elsewhere in the app.
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
 
-  // ✅ Create test notifications
-  try {
-    await createTestNotifications();
-    debugPrint("✅ Test notifications created successfully.");
-  } catch (e) {
-    debugPrint("⚠️ Could not create test notifications: $e");
-  }
+  // 2. Set up background messaging handler
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-  runApp(const ConexusApp());
+  // 3. Initialize Notification Service
+  final notificationService = NotificationService();
+  await notificationService.init();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => ThemeViewModel(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => UserViewModel(userRepo: UserRepoImpl()),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => AuthViewModel(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => NotificationViewModel(NotificationRepoImpl()),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ImageViewModel(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => SuggestedUsersViewModel(UserRepoImpl()),
+        ),
+
+        // Single shared NotificationRepo — both PostRepo and CommentRepo
+        // depend on this, so it's registered once here and reused below.
+        Provider<NotificationRepo>(
+          create: (_) => NotificationRepoImpl(),
+        ),
+
+        // PostRepo needs NotificationRepo (to notify post owners on likes),
+        // so it's built via ProxyProvider off the NotificationRepo above.
+        ProxyProvider<NotificationRepo, PostRepo>(
+          update: (_, notificationRepo, __) =>
+              PostRepoImpl(notificationRepo: notificationRepo),
+        ),
+
+        // HomeFeedViewModel depends on PostRepo, plus the current viewer's
+        // uid (needed so the feed can filter out private accounts the
+        // viewer doesn't follow). `previous ?? ...` ensures the
+        // ChangeNotifier is only constructed once, not rebuilt every time
+        // PostRepo's ProxyProvider re-evaluates.
+        ChangeNotifierProxyProvider<PostRepo, HomeFeedViewModel>(
+          create: (context) => HomeFeedViewModel(
+            context.read<PostRepo>(),
+            FirebaseAuth.instance.currentUser?.uid ?? '',
+          ),
+          update: (_, postRepo, previous) =>
+          previous ??
+              HomeFeedViewModel(
+                postRepo,
+                FirebaseAuth.instance.currentUser?.uid ?? '',
+              ),
+        ),
+
+        // CommentRepo needs NotificationRepo (to notify post owners on
+        // comments), same pattern as PostRepo above.
+        ProxyProvider<NotificationRepo, CommentRepo>(
+          update: (_, notificationRepo, __) =>
+              CommentRepoImpl(notificationRepo: notificationRepo),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
-Future<void> createTestUsers() async {
-  final firestore = FirebaseFirestore.instance;
-
-  // ✅ User 1 - Alvaroo (You)
-  await firestore.collection('users').doc('test_user_123').set({
-    "uid": "test_user_123",
-    "name": "Alvaroo",
-    "username": "heyboyyy",
-    "bio": "Software Developer | Flutter Enthusiast",
-    "profileImage": "",
-    "followers": ['test_user_456', 'test_user_789'],
-    "following": ['test_user_456', 'test_user_789'],
-  }, SetOptions(merge: true));
-
-  // ✅ User 2 - John Doe (Follower & Following)
-  await firestore.collection('users').doc('test_user_456').set({
-    "uid": "test_user_456",
-    "name": "John Doe",
-    "username": "test_user_456",
-    "bio": "Flutter Developer | UI/UX Designer",
-    "profileImage": "",
-    "followers": ['test_user_123'],
-    "following": ['test_user_123'],
-  }, SetOptions(merge: true));
-
-  // ✅ User 3 - Sarah Smith (Another Follower)
-  await firestore.collection('users').doc('test_user_789').set({
-    "uid": "test_user_789",
-    "name": "Sarah Smith",
-    "username": "test_user_789",
-    "bio": "Content Creator | Photographer",
-    "profileImage": "",
-    "followers": ['test_user_123'],
-    "following": ['test_user_123'],
-  }, SetOptions(merge: true));
-
-  debugPrint("✅ Test users created in Firestore!");
-}
-
-Future<void> createTestNotifications() async {
-  final firestore = FirebaseFirestore.instance;
-  final userUid = 'test_user_123';  // ✅ Alvaroo's UID
-
-  // Clear old notifications
-  final oldNotifs = await firestore
-      .collection('users')
-      .doc(userUid)
-      .collection('notifications')
-      .get();
-  for (var doc in oldNotifs.docs) {
-    await doc.reference.delete();
-  }
-
-  // ✅ Create test follow notification (John Doe)
-  await firestore
-      .collection('users')
-      .doc(userUid)
-      .collection('notifications')
-      .add({
-    'type': 'follow',
-    'message': 'John Doe started following you',
-    'fromUid': 'test_user_456',
-    'isRead': false,
-    'createdAt': FieldValue.serverTimestamp(),
-  });
-
-  // ✅ Create test follow notification (Sarah Smith)
-  await firestore
-      .collection('users')
-      .doc(userUid)
-      .collection('notifications')
-      .add({
-    'type': 'follow',
-    'message': 'Sarah Smith started following you',
-    'fromUid': 'test_user_789',
-    'isRead': false,
-    'createdAt': FieldValue.serverTimestamp(),
-  });
-
-  // ❌ REMOVED: Sarah Smith unfollowed you
-
-  debugPrint("✅ Test notifications created for $userUid");
-}
-
-class ConexusApp extends StatelessWidget {
-  const ConexusApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider<UserViewModel>(
-          create: (_) => UserViewModel(),
+    final themeViewModel = context.watch<ThemeViewModel>();
+
+    return MaterialApp(
+      navigatorKey: NotificationService.navigatorKey,
+      title: 'Conexus',
+      debugShowCheckedModeBanner: false,
+      themeMode: themeViewModel.themeMode,
+      theme: ThemeData(
+        brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.orange,
+          brightness: Brightness.light,
         ),
-        ChangeNotifierProvider<ImageViewModel>(
-          create: (_) => ImageViewModel(),
-        ),
-      ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Conexus',
-        theme: ThemeData(
-          primarySwatch: Colors.deepOrange,
-        ),
-        initialRoute: '/',
-        routes: {
-          '/': (context) => const ProfileScreen(),
-          '/otherProfile': (context) => OtherProfileScreen(
-            userId: ModalRoute.of(context)!.settings.arguments as String,
+        scaffoldBackgroundColor: const Color(0xFFF4F6FA),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: false,
+          titleTextStyle: TextStyle(
+            color: Colors.black,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
           ),
-        },
+          iconTheme: IconThemeData(color: Colors.black),
+        ),
       ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.orange,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: Colors.black,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          elevation: 0,
+          centerTitle: false,
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+          iconTheme: IconThemeData(color: Colors.white),
+        ),
+      ),
+      // Splash screen is now the entry point; it's expected to hand off
+      // to AuthWrapper (below) once its intro/delay logic finishes, so
+      // the real auth-state routing is unchanged.
+      home: const SplashScreen(),
+      routes: {
+        '/register': (context) => SignupScreen(),
+        '/login': (context) => LoginScreen(),
+      },
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  /// Injectable so widget tests can supply a fake auth state stream
+  /// instead of the real FirebaseAuth plugin (which has no platform
+  /// implementation under `flutter test` and would throw
+  /// `[core/no-app]` / `MissingPluginException`). Defaults to the real
+  /// stream in production — existing call sites are unaffected.
+  final Stream<User?>? authStateStream;
+
+  const AuthWrapper({super.key, this.authStateStream});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: authStateStream ?? FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // If checking auth state, show loading
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(color: Colors.orange),
+            ),
+          );
+        }
+
+        // If logged in, show Chat List (MessageFrame)
+        if (snapshot.hasData) {
+          return const MessageFrame();
+        }
+
+        // Otherwise, show Login
+        return SplashScreen();
+      },
     );
   }
 }
