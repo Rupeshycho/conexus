@@ -61,9 +61,9 @@ class _CreateImagePostScreenState extends State<CreateImagePostScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to pick image: $e')));
       }
     }
   }
@@ -156,7 +156,8 @@ class _CreateImagePostScreenState extends State<CreateImagePostScreen> {
               foregroundColor: Colors.white,
               disabledBackgroundColor: Colors.grey.shade400,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30)),
+                borderRadius: BorderRadius.circular(30),
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -184,19 +185,27 @@ class _CreateImagePostScreenState extends State<CreateImagePostScreen> {
                           child: _selectedImage != null
                               ? ClipRRect(
                                   borderRadius: BorderRadius.circular(12),
-                                  child: Image.file(_selectedImage!,
-                                      fit: BoxFit.cover,
-                                      width: double.infinity),
+                                  child: Image.file(
+                                    _selectedImage!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                  ),
                                 )
                               : Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.add_photo_alternate,
-                                        size: 48, color: Colors.grey.shade600),
+                                    Icon(
+                                      Icons.add_photo_alternate,
+                                      size: 48,
+                                      color: Colors.grey.shade600,
+                                    ),
                                     const SizedBox(height: 8),
-                                    Text('Tap to upload image',
-                                        style: TextStyle(
-                                            color: Colors.grey.shade600)),
+                                    Text(
+                                      'Tap to upload image',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
                                   ],
                                 ),
                         ),
@@ -208,8 +217,10 @@ class _CreateImagePostScreenState extends State<CreateImagePostScreen> {
                           child: CircleAvatar(
                             backgroundColor: Colors.black54,
                             child: IconButton(
-                              icon:
-                                  const Icon(Icons.close, color: Colors.white),
+                              icon: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                              ),
                               onPressed: _removeImage,
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
@@ -250,7 +261,8 @@ class _CreateImagePostScreenState extends State<CreateImagePostScreen> {
                   ),
                   const SizedBox(height: 20),
                   OutlinedButton.icon(
-                    onPressed: widget.onSwitchToText ??
+                    onPressed:
+                        widget.onSwitchToText ??
                         () => Navigator.pushNamed(context, '/create_text'),
                     icon: const Icon(Icons.text_fields),
                     label: const Text('Create a Text Post instead'),
@@ -258,7 +270,8 @@ class _CreateImagePostScreenState extends State<CreateImagePostScreen> {
                       foregroundColor: Colors.blue,
                       side: const BorderSide(color: Colors.blue, width: 1.5),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30)),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
                     ),
                   ),
                 ],
@@ -267,3 +280,5 @@ class _CreateImagePostScreenState extends State<CreateImagePostScreen> {
     );
   }
 }
+
+// Updated File
