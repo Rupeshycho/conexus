@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:conexus/model/user_model.dart';
 import 'package:conexus/viewmodel/image_view_model.dart';
 import 'package:conexus/viewmodel/user_view_model.dart';
+import 'package:conexus/widgets/image_viewer_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -94,6 +94,22 @@ class _EditProfileState extends State<EditProfile> {
     );
   }
 
+  void openImageViewer(File? localFile) {
+    if (localFile == null && imageUrl.isEmpty) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ImageViewerScreen(
+          imageFile: localFile,
+          // Only pass the network URL when there's no freshly-picked
+          // local file — ImageViewerScreen expects exactly one source.
+          imageUrl: localFile == null ? imageUrl : null,
+        ),
+      ),
+    );
+  }
+
   Future<void> saveProfile() async {
     setState(() => isLoading = true);
 
@@ -118,8 +134,10 @@ class _EditProfileState extends State<EditProfile> {
       return;
     }
 
-    final updatedUser = UserModel(
-      uid: currentUser.uid,
+    // copyWith carries every other field (contact, email, aboutMe,
+    // fcmToken, isOnline, lastSeen, createdAt) forward untouched instead
+    // of dropping them, which a manual UserModel(...) rebuild would do.
+    final updatedUser = currentUser.copyWith(
       name: nameController.text.trim().isEmpty
           ? currentUser.name
           : nameController.text.trim(),
@@ -129,17 +147,26 @@ class _EditProfileState extends State<EditProfile> {
       bio: bioController.text.trim().isEmpty
           ? currentUser.bio
           : bioController.text.trim(),
-      profileImage: finalImageUrl.isEmpty ? currentUser.profileImage : finalImageUrl,
-      followers: currentUser.followers,
-      following: currentUser.following,
+      profileImage:
+      finalImageUrl.isEmpty ? currentUser.profileImage : finalImageUrl,
     );
 
-    await userVM.updateProfile(updatedUser);
+    // UserViewModel exposes `editProfile`, not `updateProfile` — the
+    // latter only exists on UserRepo. editProfile also updates `_user`
+    // in place when the ids match, keeping other screens in sync.
+    final success = await userVM.editProfile(updatedUser);
 
     if (!mounted) return;
 
     imageVM.clearImage();
     setState(() => isLoading = false);
+
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(userVM.error ?? "Failed to update profile")),
+      );
+      return;
+    }
 
     Navigator.pop(context, {
       "name": updatedUser.name,
@@ -194,17 +221,20 @@ class _EditProfileState extends State<EditProfile> {
           children: [
             const SizedBox(height: 20),
 
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.deepOrange,
-              backgroundImage: profileImage != null
-                  ? FileImage(profileImage)
-                  : imageUrl.isNotEmpty
-                  ? NetworkImage(imageUrl)
-                  : null,
-              child: profileImage == null && imageUrl.isEmpty
-                  ? const Icon(Icons.person, color: Colors.white, size: 50)
-                  : null,
+            GestureDetector(
+              onTap: () => openImageViewer(profileImage),
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.deepOrange,
+                backgroundImage: profileImage != null
+                    ? FileImage(profileImage)
+                    : imageUrl.isNotEmpty
+                    ? NetworkImage(imageUrl)
+                    : null,
+                child: profileImage == null && imageUrl.isEmpty
+                    ? const Icon(Icons.person, color: Colors.white, size: 50)
+                    : null,
+              ),
             ),
 
             const SizedBox(height: 12),
