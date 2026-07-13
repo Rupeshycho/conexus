@@ -1,7 +1,7 @@
 // lib/viewmodel/search_viewmodel.dart
+import 'package:conexus/model/user_model.dart';
 import 'package:flutter/foundation.dart';
 
-import '../models/user_model.dart';
 import '../repo/user_repo.dart';
 
 class SearchViewModel extends ChangeNotifier {
