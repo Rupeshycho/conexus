@@ -1,23 +1,30 @@
 // lib/view/widgets/post_card.dart
 import 'package:flutter/material.dart';
 
-import '../../models/post_model.dart';
+import '../../model/post_model.dart';
 import 'video_post_player.dart';
 
 class PostCard extends StatelessWidget {
   final PostModel post;
+  final String currentUserId;
+  final VoidCallback? onLikeTap;
   final VoidCallback? onCommentTap;
   final void Function(String action)? onMenuSelected;
 
   const PostCard({
     super.key,
     required this.post,
+    required this.currentUserId,
+    this.onLikeTap,
     this.onCommentTap,
     this.onMenuSelected,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isLiked = post.isLikedBy(currentUserId);
+    final isOwnPost = post.authorId == currentUserId;
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Padding(
@@ -45,16 +52,30 @@ class PostCard extends StatelessWidget {
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert),
                   onSelected: (value) => onMenuSelected?.call(value),
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(
-                      value: 'interested',
-                      child: Text('Interested'),
-                    ),
-                    PopupMenuItem(
-                      value: 'not_interested',
-                      child: Text('Not interested'),
-                    ),
-                    PopupMenuItem(value: 'report', child: Text('Report')),
+                  itemBuilder: (context) => [
+                    if (isOwnPost) ...[
+                      const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Text(
+                          'Delete',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ] else ...[
+                      const PopupMenuItem(
+                        value: 'interested',
+                        child: Text('Interested'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'not_interested',
+                        child: Text('Not interested'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'report',
+                        child: Text('Report'),
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -94,8 +115,11 @@ class PostCard extends StatelessWidget {
             Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.favorite_border),
-                  onPressed: () {},
+                  icon: Icon(
+                    isLiked ? Icons.favorite : Icons.favorite_border,
+                    color: isLiked ? Colors.red : null,
+                  ),
+                  onPressed: onLikeTap,
                 ),
                 Text('${post.likeCount}'),
                 const SizedBox(width: 12),

@@ -1,24 +1,56 @@
 // lib/view/widgets/comment_tile.dart
+import 'package:conexus/model/comment_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-import '../../models/comment_model.dart';
 import '../../repo/comment_repo.dart';
 
 class CommentTile extends StatelessWidget {
   final CommentModel comment;
   final String currentUserId;
+  final String currentUsername;
+  final String currentUserPhotoUrl;
 
   const CommentTile({
     super.key,
     required this.comment,
     required this.currentUserId,
+    required this.currentUsername,
+    required this.currentUserPhotoUrl,
   });
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete comment?'),
+        content: const Text('This can\'t be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await context.read<CommentRepo>().deleteComment(
+        comment.commentId,
+        currentUserId,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isLiked = comment.isLikedBy(currentUserId);
+    final isOwnComment = comment.authorId == currentUserId;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -67,6 +99,19 @@ class CommentTile extends StatelessWidget {
                           color: Colors.grey.shade600,
                         ),
                       ),
+                    if (isOwnComment) ...[
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: () => _confirmDelete(context),
+                        child: Text(
+                          'Delete',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -79,10 +124,11 @@ class CommentTile extends StatelessWidget {
               color: isLiked ? Colors.red : Colors.grey,
             ),
             onPressed: () {
-              // Fixed: only commentId + userId now — no postId
               context.read<CommentRepo>().toggleLikeComment(
-                comment.commentId,
-                currentUserId,
+                commentId: comment.commentId,
+                userId: currentUserId,
+                username: currentUsername,
+                userPhotoUrl: currentUserPhotoUrl,
               );
             },
           ),

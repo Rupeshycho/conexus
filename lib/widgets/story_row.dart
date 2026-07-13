@@ -1,7 +1,9 @@
 // lib/view/widgets/story_row.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../viewmodel/suggested_users_viewmodel.dart';
+
+import '../../model/user_model.dart';
+import '../../viewmodel/user_view_model.dart';
 
 class StoryRow extends StatefulWidget {
   final String currentUserId;
@@ -18,18 +20,48 @@ class StoryRow extends StatefulWidget {
 }
 
 class _StoryRowState extends State<StoryRow> {
-  @override
-  void initState() {
-    super.initState();
-    // Load once when the row first mounts
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SuggestedUsersViewModel>().loadSuggestedUsers(widget.currentUserId);
-    });
+  List<UserModel> _followingUsers = [];
+  bool _loading = false;
+  List<String> _loadedForIds = [];
+
+  Future<void> _loadFollowingUsers(List<String> followingIds) async {
+    if (followingIds.isEmpty) {
+      setState(() {
+        _followingUsers = [];
+        _loadedForIds = [];
+      });
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      final userViewModel = context.read<UserViewModel>();
+      final users = await Future.wait(
+        followingIds.map((id) => userViewModel.getUser(id)),
+      );
+      if (!mounted) return;
+      setState(() {
+        _followingUsers = users;
+        _loadedForIds = followingIds;
+      });
+    } catch (e) {
+      debugPrint('❌ Failed to load following users for story row: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<SuggestedUsersViewModel>();
+    final userViewModel = context.watch<UserViewModel>();
+    final followingIds = userViewModel.user?.following ?? [];
+
+    // Re-fetch only when the following list actually changes.
+    if (!_loading && !_listEquals(followingIds, _loadedForIds)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadFollowingUsers(followingIds);
+      });
+    }
 
     return SizedBox(
       height: 90,
@@ -42,7 +74,7 @@ class _StoryRowState extends State<StoryRow> {
             photoUrl: widget.currentUserPhotoUrl,
             showAddIcon: true,
           ),
-          if (viewModel.isLoading)
+          if (_loading)
             const Padding(
               padding: EdgeInsets.all(20),
               child: SizedBox(
@@ -52,12 +84,21 @@ class _StoryRowState extends State<StoryRow> {
               ),
             )
           else
-            ...viewModel.suggestedUsers.map(
-                  (user) => _storyItem(label: user.username, photoUrl: user.photoUrl),
+            ..._followingUsers.map(
+              (user) =>
+                  _storyItem(label: user.name, photoUrl: user.profileImage),
             ),
         ],
       ),
     );
+  }
+
+  bool _listEquals(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 
   Widget _storyItem({
@@ -82,7 +123,9 @@ class _StoryRowState extends State<StoryRow> {
                 child: CircleAvatar(
                   radius: 28,
                   backgroundColor: Colors.grey.shade200,
-                  backgroundImage: photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+                  backgroundImage: photoUrl.isNotEmpty
+                      ? NetworkImage(photoUrl)
+                      : null,
                   child: photoUrl.isEmpty ? const Icon(Icons.person) : null,
                 ),
               ),
