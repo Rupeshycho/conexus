@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:conexus/model/user_model.dart';
 import 'package:conexus/repo/user_repo.dart';
 
@@ -16,11 +18,24 @@ class UserViewModel extends ChangeNotifier {
   UserModel? _user;
   UserModel? get user => _user;
 
+  // Alias so screens that expect `currentUser` (e.g. ProfileScreen) share
+  // the same underlying state as `.user`, rather than a second copy.
+  UserModel? get currentUser => _user;
+
   List<UserModel>? _allUsers;
   List<UserModel>? get allUsers => _allUsers;
 
   String? _userId;
   String? get userId => _userId;
+
+  // NEW: search state for SearchScreen.
+  List<UserModel> _searchResults = [];
+  List<UserModel> get searchResults => _searchResults;
+
+  bool _searching = false;
+  bool get searching => _searching;
+
+  StreamSubscription<DocumentSnapshot>? _userSubscription;
 
   void setError(String? error) {
     _error = error;
@@ -37,6 +52,28 @@ class UserViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Keeps `_user` in sync with Firestore in real time. Restarted any time
+  // a new user is established (login/register/loadCurrentUser).
+  void _listenToUserChanges(String uid) {
+    _userSubscription?.cancel();
+    _userSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen(
+          (snapshot) {
+        final data = snapshot.data();
+        if (snapshot.exists && data != null) {
+          _user = UserModel.fromMap(data);
+          notifyListeners();
+        }
+      },
+      onError: (error) {
+        debugPrint("❌ Real-time user listener error: $error");
+      },
+    );
+  }
+
   Future<bool> login(String email, String password) async {
     setLoading(true);
     setError(null);
@@ -44,6 +81,7 @@ class UserViewModel extends ChangeNotifier {
       final uid = await _userRepo.login(email, password);
       setUserId(uid);
       _user = await _userRepo.getUserId(uid);
+      _listenToUserChanges(uid);
       notifyListeners();
       return true;
     } on Exception catch (e) {
@@ -55,11 +93,11 @@ class UserViewModel extends ChangeNotifier {
   }
 
   Future<bool> register(
-    String email,
-    String password, {
-    String name = '',
-    String contact = '',
-  }) async {
+      String email,
+      String password, {
+        String name = '',
+        String contact = '',
+      }) async {
     setLoading(true);
     setError(null);
     try {
@@ -74,6 +112,7 @@ class UserViewModel extends ChangeNotifier {
       );
       await _userRepo.addUser(newUser);
       _user = newUser;
+      _listenToUserChanges(uid);
       notifyListeners();
       return true;
     } on Exception catch (e) {
@@ -89,9 +128,12 @@ class UserViewModel extends ChangeNotifier {
     setError(null);
     try {
       await _userRepo.logout();
+      await _userSubscription?.cancel();
+      _userSubscription = null;
       setUserId(null);
       _user = null;
       _allUsers = null;
+      _searchResults = [];
       notifyListeners();
       return true;
     } on Exception catch (e) {
@@ -171,6 +213,23 @@ class UserViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> loadCurrentUser() async {
+    setLoading(true);
+    setError(null);
+    try {
+      _user = await _userRepo.getCurrentUser();
+      if (_user != null) {
+        setUserId(_user!.id);
+        _listenToUserChanges(_user!.id);
+      }
+      notifyListeners();
+    } on Exception catch (e) {
+      setError(e.toString());
+    } finally {
+      setLoading(false);
+    }
+  }
+
   Future<bool> editProfile(UserModel userModel) async {
     setLoading(true);
     setError(null);
@@ -195,17 +254,7 @@ class UserViewModel extends ChangeNotifier {
     setError(null);
     try {
       final imageUrl = await _userRepo.uploadProfileImage(_user!.id, imagePath);
-      final updatedUser = UserModel(
-        id: _user!.id,
-        name: _user!.name,
-        contact: _user!.contact,
-        email: _user!.email,
-        profileImage: imageUrl,
-        aboutMe: _user!.aboutMe,
-        fcmToken: _user!.fcmToken,
-        isOnline: _user!.isOnline,
-        lastSeen: _user!.lastSeen,
-      );
+      final updatedUser = _user!.copyWith(profileImage: imageUrl);
       await _userRepo.editProfile(updatedUser);
       _user = updatedUser;
       notifyListeners();
@@ -216,5 +265,111 @@ class UserViewModel extends ChangeNotifier {
     } finally {
       setLoading(false);
     }
+  }
+
+  // NEW: real user search for SearchScreen, backed by
+  // UserRepo.searchUsers (prefix match on `name`).
+  Future<void> searchUsers(String query) async {
+    if (query.trim().isEmpty) {
+      _searchResults = [];
+      notifyListeners();
+      return;
+    }
+
+    _searching = true;
+    notifyListeners();
+    try {
+      _searchResults = await _userRepo.searchUsers(query.trim());
+    } on Exception catch (e) {
+      setError(e.toString());
+      _searchResults = [];
+    } finally {
+      _searching = false;
+      notifyListeners();
+    }
+  }
+
+  // ── Profile lookup / social ──
+
+  Future<UserModel> getUser(String uid) async {
+    return _userRepo.getUserById(uid);
+  }
+
+  Future<void> follow(String uid) async {
+    try {
+      await _userRepo.followUser(uid);
+      if (_user != null && !_user!.following.contains(uid)) {
+        _user = _user!.copyWith(following: [..._user!.following, uid]);
+        notifyListeners();
+      }
+    } on Exception catch (e) {
+      setError(e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> unfollow(String uid) async {
+    try {
+      await _userRepo.unfollowUser(uid);
+      if (_user != null && _user!.following.contains(uid)) {
+        _user = _user!.copyWith(
+          following: _user!.following.where((id) => id != uid).toList(),
+        );
+        notifyListeners();
+      }
+    } on Exception catch (e) {
+      setError(e.toString());
+      rethrow;
+    }
+  }
+
+  bool isFollowing(String uid) {
+    if (_user == null) return false;
+    return _user!.following.contains(uid);
+  }
+
+  @override
+  void dispose() {
+    _userSubscription?.cancel();
+    super.dispose();
+  }
+  Future<void> block(String uid) async {
+    try {
+      await _userRepo.blockUser(uid);
+      if (_user != null) {
+        final updatedBlocked = _user!.blockedUsers.contains(uid)
+            ? _user!.blockedUsers
+            : [..._user!.blockedUsers, uid];
+        _user = _user!.copyWith(
+          blockedUsers: updatedBlocked,
+          following: _user!.following.where((id) => id != uid).toList(),
+          followers: _user!.followers.where((id) => id != uid).toList(),
+        );
+        notifyListeners();
+      }
+    } on Exception catch (e) {
+      setError(e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> unblock(String uid) async {
+    try {
+      await _userRepo.unblockUser(uid);
+      if (_user != null && _user!.blockedUsers.contains(uid)) {
+        _user = _user!.copyWith(
+          blockedUsers: _user!.blockedUsers.where((id) => id != uid).toList(),
+        );
+        notifyListeners();
+      }
+    } on Exception catch (e) {
+      setError(e.toString());
+      rethrow;
+    }
+  }
+
+  bool isBlocked(String uid) {
+    if (_user == null) return false;
+    return _user!.blockedUsers.contains(uid);
   }
 }
