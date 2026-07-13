@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../model/comment.dart';
-import 'notification_service.dart';
+import '../model/notification_model.dart';
+import '../services/notification_service.dart';
 
 class CommentService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -34,11 +35,12 @@ class CommentService {
 
     if (postOwnerId != userId) {
       await NotificationService.createNotification(
-        receiverId: postOwnerId,
-        senderId: senderId,
-        type: 'comment',
+        toUserId: postOwnerId,
+        fromUserId: senderId,
+        fromUsername: username,
+        fromUserPhotoUrl: avatar ?? '',
+        type: NotificationType.comment,
         postId: postId,
-        message: '$username commented: "$text"',
       );
     }
   }
