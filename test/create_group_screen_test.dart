@@ -6,7 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:conexus/view/create_group_screen.dart';
 import 'package:conexus/viewmodel/user_view_model.dart';
 import 'package:conexus/model/user_model.dart';
-import 'firebase_mocks.dart';
+import '../lib/firebase_mocks.dart';
 
 class MockUserViewModel extends Mock implements UserViewModel {}
 

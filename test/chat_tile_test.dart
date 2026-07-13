@@ -14,7 +14,7 @@ void main() {
             profileImage: 'https://i.pravatar.cc/150?u=johndoe',
             lastMessage: 'Hello there!',
             time: '10:30 AM',
-            unreadCount: '3',
+            unreadCount: 3,
             isOnline: true,
             onTap: () {
               tapped = true;
