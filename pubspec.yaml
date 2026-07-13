@@ -1,0 +1,65 @@
+name: conexus
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  firebase_core: ^4.0.0
+  firebase_auth: ^6.0.0
+  cloud_firestore: ^6.0.0
+  firebase_storage: ^13.0.0
+  firebase_messaging: ^16.0.0
+  http: ^1.2.1
+
+  provider: ^6.1.5
+  shared_preferences: ^2.5.3
+  image_picker: ^1.2.0
+  flutter_local_notifications: ^19.4.0
+  flutter_animate: ^4.5.2
+  sensors_plus: ^7.0.0
+  font_awesome_flutter: ^10.10.0
+  agora_rtc_engine: ^6.5.2
+  permission_handler: ^12.0.1
+  file_picker: ^8.1.2
+  url_launcher: ^6.3.0
+  audioplayers: ^6.1.0
+  fake_cloud_firestore: ^4.0.0
+  firebase_auth_mocks: ^0.15.0
+  get_it: ^9.2.1
+  timeago: ^3.7.1
+  video_player: ^2.11.1
+  qr_flutter: ^4.1.0
+  app_links: ^6.0.0
+  connectivity_plus: ^6.0.0
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  mocktail: ^1.0.4
+  firebase_core_platform_interface: any
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/Conexus.logo.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/Conexus.logo.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+     - assets/images/profile_pic.png
+     - assets/Sounds/
+     - assets/images/Conexus.logo.png
