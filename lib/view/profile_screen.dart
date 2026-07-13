@@ -1,15 +1,26 @@
+import 'package:conexus/model/post_model.dart';
 import 'package:conexus/model/user_model.dart';
+import 'package:conexus/repo/post_repo.dart';
 import 'package:conexus/view/followers_list.dart';
 import 'package:conexus/view/following_list.dart';
 import 'package:conexus/view/share_profile.dart';
 import 'package:conexus/view/edit_profile.dart';
-import 'package:conexus/view/notifications_screen.dart';
+import 'package:conexus/view/notification_screen.dart';
+import 'package:conexus/viewmodel/notification_viewmodel.dart';
 import 'package:conexus/viewmodel/user_view_model.dart';
+import 'package:conexus/widgets/image_viewer_screen.dart';
+import 'package:conexus/widgets/profile_post_grid.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  /// If null, shows the signed-in user's own profile (Edit/Share buttons).
+  /// If set and different from the signed-in user, shows that user's
+  /// profile instead (Follow/Unfollow + Block/Unblock menu).
+  final String? userId;
+
+  const ProfileScreen({super.key, this.userId});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -18,26 +29,51 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   UserModel? user;
   bool isLoading = true;
+  bool isFollowActionInFlight = false;
+  // Pulled from Provider instead of constructed directly, so this screen
+  // shares the same PostRepo instance (and its NotificationRepo) as the
+  // rest of the app.
+  late final PostRepo _postRepo;
+
+  bool get _isOwnProfile {
+    final myUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    return widget.userId == null || widget.userId == myUid;
+  }
 
   @override
   void initState() {
     super.initState();
+    _postRepo = context.read<PostRepo>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadProfile();
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      context.read<NotificationViewModel>().listenToNotifications(uid);
     });
   }
 
   Future<void> loadProfile() async {
     final vm = context.read<UserViewModel>();
 
-    await vm.loadCurrentUser();
-
-    if (!mounted) return;
-
-    setState(() {
-      user = vm.currentUser;
-      isLoading = false;
-    });
+    if (_isOwnProfile) {
+      await vm.loadCurrentUser();
+      if (!mounted) return;
+      setState(() {
+        user = vm.currentUser;
+        isLoading = false;
+      });
+    } else {
+      // Make sure the current user is loaded too, so follow/block state
+      // (which lives on the current user's document) is available.
+      if (vm.currentUser == null) {
+        await vm.loadCurrentUser();
+      }
+      final otherUser = await vm.getUser(widget.userId!);
+      if (!mounted) return;
+      setState(() {
+        user = otherUser;
+        isLoading = false;
+      });
+    }
   }
 
   Future<void> openEditProfile() async {
@@ -57,14 +93,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (result != null && mounted) {
       setState(() {
-        user = UserModel(
-          uid: user!.uid,
+        user = user!.copyWith(
           name: result["name"] ?? user!.name,
           username: result["username"] ?? user!.username,
           bio: result["bio"] ?? user!.bio,
           profileImage: result["profileImageUrl"] ?? user!.profileImage,
-          followers: user!.followers,
-          following: user!.following,
         );
       });
     } else {
@@ -94,11 +127,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => _ProfileImageViewer(
-          imageUrl: user!.profileImage,
-        ),
+        builder: (_) => ImageViewerScreen(imageUrl: user!.profileImage),
       ),
     );
+  }
+
+  Future<void> _toggleFollow() async {
+    if (user == null || isFollowActionInFlight) return;
+    final vm = context.read<UserViewModel>();
+    final alreadyFollowing = vm.isFollowing(user!.id);
+
+    setState(() => isFollowActionInFlight = true);
+    try {
+      if (alreadyFollowing) {
+        await vm.unfollow(user!.id);
+      } else {
+        await vm.follow(user!.id);
+      }
+      await loadProfile(); // refresh follower counts
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Something went wrong: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => isFollowActionInFlight = false);
+    }
+  }
+
+  Future<void> _confirmBlock() async {
+    if (user == null) return;
+    final vm = context.read<UserViewModel>();
+    final alreadyBlocked = vm.isBlocked(user!.id);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(alreadyBlocked ? 'Unblock user?' : 'Block user?'),
+        content: Text(
+          alreadyBlocked
+              ? '${user!.name} will be able to see your profile and follow you again.'
+              : '${user!.name} won\'t be able to follow you or see your profile. '
+              'You\'ll stop following each other.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              alreadyBlocked ? 'Unblock' : 'Block',
+              style: TextStyle(color: alreadyBlocked ? Colors.deepOrange : Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      if (alreadyBlocked) {
+        await vm.unblock(user!.id);
+      } else {
+        await vm.block(user!.id);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(alreadyBlocked ? '${user!.name} unblocked' : '${user!.name} blocked'),
+          ),
+        );
+        await loadProfile();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -106,80 +217,85 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (isLoading) {
       return const Scaffold(
         body: Center(
-          child: CircularProgressIndicator(
-            color: Colors.deepOrange,
-          ),
+          child: CircularProgressIndicator(color: Colors.deepOrange),
         ),
       );
     }
 
     if (user == null) {
       return const Scaffold(
-        body: Center(
-          child: Text("User not found"),
-        ),
+        body: Center(child: Text("User not found")),
       );
     }
+
+    final vm = context.watch<UserViewModel>();
+    final unreadCount = context
+        .watch<NotificationViewModel>()
+        .notifications
+        .where((n) => !n.isRead)
+        .length;
+    final isFollowing = !_isOwnProfile && vm.isFollowing(user!.id);
+    final isBlocked = !_isOwnProfile && vm.isBlocked(user!.id);
+    final viewerId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return DefaultTabController(
       length: 1,
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F4F4),
-
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
           title: const Text(
             "Conexus",
-            style: TextStyle(
-              color: Colors.deepOrange,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.bold),
           ),
-          // ❌ Menu icon REMOVED
-          leading: null,
+          leading: _isOwnProfile ? null : null, // default back button on other profiles
+          automaticallyImplyLeading: !_isOwnProfile,
           actions: [
-            // Notification Bell Icon
-            Stack(
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.notifications_outlined,
-                    color: Colors.deepOrange,
-                    size: 28,
+            if (_isOwnProfile)
+              Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined, color: Colors.deepOrange, size: 28),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const NotificationScreen()),
+                      );
+                    },
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const NotificationsScreen(),
+                  if (unreadCount > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
                       ),
-                    );
-                  },
-                ),
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
                     ),
+                ],
+              )
+            else
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.deepOrange),
+                onSelected: (value) {
+                  if (value == 'block') _confirmBlock();
+                },
+                itemBuilder: (ctx) => [
+                  PopupMenuItem(
+                    value: 'block',
+                    child: Text(isBlocked ? 'Unblock' : 'Block'),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
           ],
         ),
-
         body: SingleChildScrollView(
           child: Column(
             children: [
               const SizedBox(height: 10),
-
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 18),
                 child: Stack(
@@ -191,14 +307,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(28),
                         gradient: LinearGradient(
-                          colors: [
-                            Colors.orange.shade300,
-                            Colors.deepOrange,
-                          ],
+                          colors: [Colors.orange.shade300, Colors.deepOrange],
                         ),
                       ),
                     ),
-
                     Positioned(
                       bottom: -55,
                       child: GestureDetector(
@@ -211,17 +323,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             backgroundColor: Colors.orange.shade100,
                             child: CircleAvatar(
                               radius: 54,
-                              backgroundImage:
-                              user!.profileImage.isNotEmpty
+                              backgroundImage: user!.profileImage.isNotEmpty
                                   ? NetworkImage(user!.profileImage)
                                   : null,
-
                               child: user!.profileImage.isEmpty
-                                  ? const Icon(
-                                Icons.person,
-                                size: 60,
-                                color: Colors.deepOrange,
-                              )
+                                  ? const Icon(Icons.person, size: 60, color: Colors.deepOrange)
                                   : null,
                             ),
                           ),
@@ -231,150 +337,135 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 70),
-
               Text(
                 user!.name.isEmpty ? "No Name" : user!.name,
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
               ),
-
               const SizedBox(height: 5),
-
               Text(
-                user!.username.isEmpty
-                    ? "@username"
-                    : "@${user!.username.replaceAll("@", "")}",
-                style: const TextStyle(
-                  color: Colors.deepOrange,
-                  fontSize: 16,
-                ),
+                user!.username.isEmpty ? "@username" : "@${user!.username.replaceAll("@", "")}",
+                style: const TextStyle(color: Colors.deepOrange, fontSize: 16),
               ),
-
               const SizedBox(height: 25),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  buildStat("142", "Posts"),
-
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => FollowersList(
-                            followers: user!.followers,
-                          ),
-                        ),
-                      );
+                  StreamBuilder<List<PostModel>>(
+                    stream: _postRepo.getUserPosts(user!.uid, viewerId),
+                    builder: (context, snapshot) {
+                      final count = snapshot.data?.length ?? 0;
+                      return buildStat(count.toString(), "Posts");
                     },
-                    child: buildStat(
-                      user!.followers.length.toString(),
-                      "Followers",
-                    ),
                   ),
-
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => FollowingList(
-                            following: user!.following,
-                          ),
+                          builder: (_) => FollowersList(followers: user!.followers),
                         ),
                       );
                     },
-                    child: buildStat(
-                      user!.following.length.toString(),
-                      "Following",
-                    ),
+                    child: buildStat(user!.followers.length.toString(), "Followers"),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FollowingList(following: user!.following),
+                        ),
+                      );
+                    },
+                    child: buildStat(user!.following.length.toString(), "Following"),
                   ),
                 ],
               ),
-
               const SizedBox(height: 30),
-
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 30),
                 child: Text(
                   user!.bio.isEmpty ? "No Bio Yet" : user!.bio,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 16,
-                    height: 1.5,
-                  ),
+                  style: const TextStyle(color: Colors.black54, fontSize: 16, height: 1.5),
                 ),
               ),
-
               const SizedBox(height: 30),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    onPressed: openEditProfile,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 25,
-                        vertical: 15,
+              if (_isOwnProfile)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: openEditProfile,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepOrange,
+                        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
+                      child: const Text("Edit Profile", style: TextStyle(color: Colors.white)),
                     ),
-                    child: const Text(
-                      "Edit Profile",
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    onPressed: openShareProfile,
-                    icon: const Icon(
-                      Icons.share,
-                      color: Colors.deepOrange,
-                    ),
-                    label: const Text(
-                      "Share Profile",
-                      style: TextStyle(color: Colors.deepOrange),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 25,
-                        vertical: 15,
-                      ),
-                      side: const BorderSide(color: Colors.deepOrange),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                    const SizedBox(width: 12),
+                    OutlinedButton.icon(
+                      onPressed: openShareProfile,
+                      icon: const Icon(Icons.share, color: Colors.deepOrange),
+                      label: const Text("Share Profile", style: TextStyle(color: Colors.deepOrange)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                        side: const BorderSide(color: Colors.deepOrange),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                       ),
                     ),
-                  ),
-                ],
-              ),
-
+                  ],
+                )
+              else
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (isBlocked)
+                      OutlinedButton.icon(
+                        onPressed: _confirmBlock,
+                        icon: const Icon(Icons.block, color: Colors.red),
+                        label: const Text("Blocked · Tap to unblock", style: TextStyle(color: Colors.red)),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                          side: const BorderSide(color: Colors.red),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        ),
+                      )
+                    else
+                      ElevatedButton(
+                        onPressed: isFollowActionInFlight ? null : _toggleFollow,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isFollowing ? Colors.grey.shade300 : Colors.deepOrange,
+                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        ),
+                        child: isFollowActionInFlight
+                            ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                            : Text(
+                          isFollowing ? "Following" : "Follow",
+                          style: TextStyle(color: isFollowing ? Colors.black87 : Colors.white),
+                        ),
+                      ),
+                  ],
+                ),
               const SizedBox(height: 30),
-
               const TabBar(
                 labelColor: Colors.deepOrange,
                 unselectedLabelColor: Colors.grey,
                 indicatorColor: Colors.deepOrange,
-                tabs: [
-                  Tab(icon: Icon(Icons.grid_on)),
-                ],
+                tabs: [Tab(icon: Icon(Icons.grid_on))],
               ),
-
               SizedBox(
                 height: 500,
                 child: TabBarView(
                   children: [
-                    buildGrid(),
+                    ProfilePostGrid(userId: user!.uid, postRepo: _postRepo),
                   ],
                 ),
               ),
@@ -388,119 +479,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget buildStat(String number, String label) {
     return Column(
       children: [
-        Text(
-          number,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Colors.deepOrange,
-          ),
-        ),
+        Text(number, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.deepOrange)),
         const SizedBox(height: 5),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.black54),
-        ),
+        Text(label, style: const TextStyle(color: Colors.black54)),
       ],
-    );
-  }
-
-  Widget buildGrid() {
-    return GridView.builder(
-      padding: const EdgeInsets.all(15),
-      itemCount: 12,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-      ),
-      itemBuilder: (context, index) {
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: LinearGradient(
-              colors: [
-                Colors.orange.shade200,
-                Colors.deepOrange.shade300,
-              ],
-            ),
-          ),
-          child: const Icon(
-            Icons.image,
-            color: Colors.white,
-            size: 35,
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ProfileImageViewer extends StatelessWidget {
-  final String imageUrl;
-
-  const _ProfileImageViewer({required this.imageUrl});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: InteractiveViewer(
-              minScale: 0.8,
-              maxScale: 5,
-              child: Center(
-                child: Hero(
-                  tag: "profileImage",
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.contain,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return const Center(
-                        child: CircularProgressIndicator(
-                          color: Colors.deepOrange,
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.broken_image,
-                        color: Colors.white54,
-                        size: 60,
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          Positioned(
-            top: 40,
-            right: 20,
-            child: SafeArea(
-              child: GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: Colors.black45,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 26,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
