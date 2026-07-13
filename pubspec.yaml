@@ -31,6 +31,14 @@ dependencies:
   file_picker: ^8.1.2
   url_launcher: ^6.3.0
   audioplayers: ^6.1.0
+  fake_cloud_firestore: ^4.0.0
+  firebase_auth_mocks: ^0.15.0
+  get_it: ^9.2.1
+  timeago: ^3.7.1
+  video_player: ^2.11.1
+  qr_flutter: ^4.1.0
+  app_links: ^6.0.0
+  connectivity_plus: ^6.0.0
 
 
 dev_dependencies:
@@ -38,9 +46,20 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   mocktail: ^1.0.4
+  firebase_core_platform_interface: any
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/Conexus.logo.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/Conexus.logo.png"
 
 flutter:
   uses-material-design: true
   assets:
-     - Assets/Image/profile_pic.png
-     - Assets/Sounds/
+     - assets/images/profile_pic.png
+     - assets/Sounds/
+     - assets/images/Conexus.logo.png
