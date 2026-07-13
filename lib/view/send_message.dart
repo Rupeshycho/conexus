@@ -5,7 +5,6 @@ import "package:firebase_auth/firebase_auth.dart";
 import 'package:conexus/viewmodel/user_view_model.dart';
 import 'chat_tile.dart';
 import 'select_user_screen.dart';
-import 'package:conexus/viewmodel/theme_view_model.dart';
 import 'message_individual_frame.dart';
 import 'profile_screen.dart';
 import 'create_group_screen.dart';
@@ -18,11 +17,74 @@ class MessageFrame extends StatefulWidget {
   State<MessageFrame> createState() => _MessageFrameState();
 }
 
+class _ChatRoomData {
+  final String chatRoomId;
+  final bool isGroup;
+  final String displayTitle;
+  final String displayImage;
+  final String lastMessage;
+  final Timestamp? lastMessageTime;
+  final int unreadCount;
+  final String otherUserId;
+
+  const _ChatRoomData({
+    required this.chatRoomId,
+    required this.isGroup,
+    required this.displayTitle,
+    required this.displayImage,
+    required this.lastMessage,
+    required this.lastMessageTime,
+    required this.unreadCount,
+    required this.otherUserId,
+  });
+
+  factory _ChatRoomData.fromDoc(
+      QueryDocumentSnapshot doc, String currentUserId) {
+    final data = doc.data() as Map<String, dynamic>;
+    final isGroup = data['isGroup'] == true;
+
+    final participants = List<String>.from(data['participants'] ?? []);
+    final otherUserId = participants.firstWhere(
+          (id) => id != currentUserId,
+      orElse: () => '',
+    );
+
+    final names = Map<String, dynamic>.from(data['names'] ?? {});
+    final profileImages =
+    Map<String, dynamic>.from(data['profileImages'] ?? {});
+    final unreadMap = Map<String, dynamic>.from(data['unreadCount'] ?? {});
+
+    final displayTitle = isGroup
+        ? (data['groupName']?.toString() ?? 'Group')
+        : (names[otherUserId]?.toString() ?? 'User');
+
+    final displayImage = isGroup
+        ? (data['groupImage']?.toString() ??
+        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayTitle)}&background=random')
+        : (profileImages[otherUserId]?.toString() ??
+        'https://i.pravatar.cc/150?u=$otherUserId');
+
+    return _ChatRoomData(
+      chatRoomId: doc.id,
+      isGroup: isGroup,
+      displayTitle: displayTitle,
+      displayImage: displayImage,
+      lastMessage: data['lastMessage']?.toString() ?? '',
+      lastMessageTime: data['lastMessageTime'] as Timestamp?,
+      // unreadCount values come from Firestore as num; coerce once here so
+      // ChatTile always receives a real int instead of a stringified one.
+      unreadCount: (unreadMap[currentUserId] as num?)?.toInt() ?? 0,
+      otherUserId: otherUserId,
+    );
+  }
+}
+
 class _MessageFrameState extends State<MessageFrame> {
   final TextEditingController searchController = TextEditingController();
   String searchQuery = "";
 
   late final Stream<QuerySnapshot> chatRoomStream;
+  late final String currentUserId;
 
   @override
   void initState() {
@@ -32,12 +94,13 @@ class _MessageFrameState extends State<MessageFrame> {
       context.read<UserViewModel>().getAllUser();
     });
 
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-    // ✅ FIX: stream created ONCE (not in build)
+    // Stream created once (not in build) so StreamBuilder doesn't resubscribe
+    // on every rebuild.
     chatRoomStream = FirebaseFirestore.instance
         .collection('chat_rooms')
-        .where('participants', arrayContains: uid)
+        .where('participants', arrayContains: currentUserId)
         .snapshots();
   }
 
@@ -54,15 +117,14 @@ class _MessageFrameState extends State<MessageFrame> {
     final diff = now.difference(date);
 
     if (diff.inDays == 0) {
-      final hour = date.hour > 12
-          ? date.hour - 12
-          : (date.hour == 0 ? 12 : date.hour);
+      final hour =
+      date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
       final amPm = date.hour >= 12 ? "PM" : "AM";
       return "$hour:${date.minute.toString().padLeft(2, '0')} $amPm";
     } else if (diff.inDays == 1) {
       return "Yesterday";
     } else if (diff.inDays < 7) {
-      final weekdays = [
+      const weekdays = [
         'Monday',
         'Tuesday',
         'Wednesday',
@@ -77,22 +139,51 @@ class _MessageFrameState extends State<MessageFrame> {
     }
   }
 
+  void _openChat(_ChatRoomData room) {
+    // Fire-and-forget: reset unread count for the current user. Errors are
+    // swallowed on purpose (non-critical, shouldn't block navigation) but
+    // logged so they're not silently lost.
+    FirebaseFirestore.instance
+        .collection('chat_rooms')
+        .doc(room.chatRoomId)
+        .update({'unreadCount.$currentUserId': 0}).catchError((e) {
+      debugPrint('Failed to reset unread count for ${room.chatRoomId}: $e');
+    });
+
+    if (room.isGroup) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => GroupChatScreen(
+            chatRoomId: room.chatRoomId,
+            groupName: room.displayTitle,
+            groupImage: room.displayImage,
+          ),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            receiverId: room.otherUserId,
+            username: room.displayTitle,
+            profileImage: room.displayImage,
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final themeViewModel = context.watch<ThemeViewModel>();
-    final isDark = themeViewModel.isDarkMode;
-
-    // ⚠️ FIX: avoid rebuild chain issue
+    // context.read (not watch): this screen doesn't rebuild on user-list
+    // changes on its own, it reads the current snapshot each build.
     final viewModel = context.read<UserViewModel>();
-
-    final currentUserId =
-        FirebaseAuth.instance.currentUser?.uid ?? '';
 
     final horizontalUsers = (viewModel.allUsers ?? [])
         .where((u) => u.id != currentUserId)
-        .where((u) => u.name
-        .toLowerCase()
-        .contains(searchQuery.toLowerCase()))
+        .where((u) => u.name.toLowerCase().contains(searchQuery.toLowerCase()))
         .toList();
 
     return Scaffold(
@@ -102,17 +193,17 @@ class _MessageFrameState extends State<MessageFrame> {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
         ),
         actions: [
-
           Consumer<UserViewModel>(
             builder: (context, vm, child) {
-              final currentUser = vm.user;
+              // Was `vm.user`, which doesn't match the real getter
+              // (`currentUser`, confirmed by profile_screen.dart) — that
+              // meant this avatar was silently always null.
+              final currentUser = vm.currentUser;
               return GestureDetector(
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const ProfileScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
                   );
                 },
                 child: Padding(
@@ -120,10 +211,12 @@ class _MessageFrameState extends State<MessageFrame> {
                   child: CircleAvatar(
                     radius: 16,
                     backgroundColor: Colors.orange.shade200,
-                    backgroundImage: currentUser != null && currentUser.profileImage.isNotEmpty
+                    backgroundImage: currentUser != null &&
+                        currentUser.profileImage.isNotEmpty
                         ? NetworkImage(currentUser.profileImage)
                         : null,
-                    child: currentUser == null || currentUser.profileImage.isEmpty
+                    child: currentUser == null ||
+                        currentUser.profileImage.isEmpty
                         ? const Icon(Icons.person, size: 16, color: Colors.white)
                         : null,
                   ),
@@ -135,9 +228,7 @@ class _MessageFrameState extends State<MessageFrame> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const CreateGroupScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const CreateGroupScreen()),
               );
             },
             icon: const Icon(Icons.group_add),
@@ -146,34 +237,21 @@ class _MessageFrameState extends State<MessageFrame> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const SelectUserScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const SelectUserScreen()),
               );
             },
             icon: const Icon(Icons.edit),
           ),
-          IconButton(
-            onPressed: () {
-              viewModel.logout();
-            },
-            icon: const Icon(Icons.logout, color: Colors.red),
-          ),
         ],
       ),
-
       body: Column(
         children: [
-          // SEARCH BAR (UNCHANGED)
+          // SEARCH BAR
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
               controller: searchController,
-              onChanged: (val) {
-                setState(() {
-                  searchQuery = val;
-                });
-              },
+              onChanged: (val) => setState(() => searchQuery = val),
               decoration: InputDecoration(
                 hintText: "Search users...",
                 prefixIcon: const Icon(Icons.search),
@@ -181,9 +259,7 @@ class _MessageFrameState extends State<MessageFrame> {
                     ? IconButton(
                   onPressed: () {
                     searchController.clear();
-                    setState(() {
-                      searchQuery = "";
-                    });
+                    setState(() => searchQuery = "");
                   },
                   icon: const Icon(Icons.close),
                 )
@@ -192,7 +268,7 @@ class _MessageFrameState extends State<MessageFrame> {
             ),
           ),
 
-          // USERS LIST (UNCHANGED)
+          // HORIZONTAL USER LIST
           if (horizontalUsers.isNotEmpty) ...[
             SizedBox(
               height: 90,
@@ -248,136 +324,77 @@ class _MessageFrameState extends State<MessageFrame> {
 
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              // ✅ FIX: stable stream
               stream: chatRoomStream,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Center(
-                    child: Text("Error: ${snapshot.error}"),
-                  );
+                  return Center(child: Text("Error: ${snapshot.error}"));
                 }
 
-                if (snapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 if (!snapshot.hasData) {
-                  return const Center(
-                    child: Text("No data"),
-                  );
+                  return const Center(child: Text("No data"));
                 }
 
-                final chatDocs = snapshot.data!.docs.toList();
+                final chatDocs = snapshot.data!.docs;
 
                 if (chatDocs.isEmpty) {
-                  return const Center(
-                    child: Text("No chats found"),
-                  );
+                  return const Center(child: Text("No chats found"));
                 }
 
-                chatDocs.sort((a, b) {
-                  final aTime =
-                  (a.data() as Map)['lastMessageTime']
-                  as Timestamp?;
-                  final bTime =
-                  (b.data() as Map)['lastMessageTime']
-                  as Timestamp?;
+                // Parse each doc exactly once.
+                final rooms = chatDocs
+                    .map((doc) => _ChatRoomData.fromDoc(doc, currentUserId))
+                    .toList();
 
+                rooms.sort((a, b) {
+                  final aTime = a.lastMessageTime;
+                  final bTime = b.lastMessageTime;
+                  if (aTime == null && bTime == null) return 0;
                   if (aTime == null) return 1;
                   if (bTime == null) return -1;
-
                   return bTime.compareTo(aTime);
                 });
 
-                // Filter by search query
-                final filteredDocs = chatDocs.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final participants = List<String>.from(data['participants'] ?? []);
-                  final otherUserId = participants.firstWhere((id) => id != currentUserId, orElse: () => '');
-                  final names = Map<String, dynamic>.from(data['names'] ?? {});
-                  final otherUserName = names[otherUserId]?.toString().toLowerCase() ?? '';
-                  final groupName = data['groupName']?.toString().toLowerCase() ?? '';
-                  final query = searchQuery.toLowerCase();
-                  return otherUserName.contains(query) || groupName.contains(query);
-                }).toList();
+                final query = searchQuery.toLowerCase();
+                final filteredRooms = query.isEmpty
+                    ? rooms
+                    : rooms
+                    .where((r) =>
+                    r.displayTitle.toLowerCase().contains(query))
+                    .toList();
 
-                if (filteredDocs.isEmpty) {
+                if (filteredRooms.isEmpty) {
                   return const Center(
-                    child: Text("No matches found", style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    child: Text(
+                      "No matches found",
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
                   );
                 }
 
                 return ListView.builder(
                   physics: const BouncingScrollPhysics(),
-                  itemCount: filteredDocs.length,
+                  itemCount: filteredRooms.length,
                   itemBuilder: (context, index) {
-                    final data = filteredDocs[index].data() as Map<String, dynamic>;
-                    final chatRoomId = filteredDocs[index].id;
-                    final isGroup = data['isGroup'] == true;
-
-                    final participants = List<String>.from(data['participants'] ?? []);
-                    final otherUserId = participants.firstWhere(
-                          (id) => id != currentUserId,
-                      orElse: () => '',
-                    );
-
-                    final names = Map<String, dynamic>.from(data['names'] ?? {});
-                    final profileImages = Map<String, dynamic>.from(data['profileImages'] ?? {});
-                    final unreadMap = Map<String, dynamic>.from(data['unreadCount'] ?? {});
-
-                    final displayTitle = isGroup
-                        ? (data['groupName']?.toString() ?? 'Group')
-                        : (names[otherUserId]?.toString() ?? 'User');
-
-                    final displayImage = isGroup
-                        ? (data['groupImage']?.toString() ?? 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayTitle)}&background=random')
-                        : (profileImages[otherUserId]?.toString() ?? 'https://i.pravatar.cc/150?u=$otherUserId');
-
-                    final lastMsg = data['lastMessage']?.toString() ?? '';
-                    final lastMsgTime = data['lastMessageTime'] as Timestamp?;
-                    final unreadCount = unreadMap[currentUserId]?.toString() ?? '0';
+                    final room = filteredRooms[index];
 
                     return ChatTile(
-                      username: displayTitle,
-                      profileImage: displayImage,
-                      lastMessage: lastMsg,
-                      time: formatTimestamp(lastMsgTime),
-                      unreadCount: unreadCount,
-                      isOnline: !isGroup,
-                      onTap: () {
-                        // Reset unread count
-                        FirebaseFirestore.instance
-                            .collection('chat_rooms')
-                            .doc(chatRoomId)
-                            .update({'unreadCount.$currentUserId': 0});
-
-                        if (isGroup) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => GroupChatScreen(
-                                chatRoomId: chatRoomId,
-                                groupName: displayTitle,
-                                groupImage: displayImage,
-                              ),
-                            ),
-                          );
-                        } else {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ChatScreen(
-                                receiverId: otherUserId,
-                                username: displayTitle,
-                                profileImage: displayImage,
-                              ),
-                            ),
-                          );
-                        }
-                      },
+                      key: ValueKey(room.chatRoomId),
+                      username: room.displayTitle,
+                      profileImage: room.displayImage,
+                      lastMessage: room.lastMessage,
+                      time: formatTimestamp(room.lastMessageTime),
+                      unreadCount: room.unreadCount,
+                      // NOTE: this reflects "is a 1:1 chat", not real
+                      // presence — there's no online-status source yet.
+                      // Wire this up to a presence collection/RTDB when
+                      // that's available; leaving as-is for now to avoid
+                      // faking a feature that doesn't exist server-side.
+                      isOnline: !room.isGroup,
+                      onTap: () => _openChat(room),
                     );
                   },
                 );
