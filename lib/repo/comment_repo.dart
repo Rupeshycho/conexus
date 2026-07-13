@@ -1,4 +1,4 @@
-import '../models/comment_model.dart';
+import 'package:conexus/model/comment_model.dart';
 
 abstract class CommentRepo {
   Stream<List<CommentModel>> getComments(String postId);
@@ -10,6 +10,11 @@ abstract class CommentRepo {
     required String text,
   });
   Future<void> deleteComment(String commentId, String userId);
-  Future<void> toggleLikeComment(String commentId, String userId);
+  Future<void> toggleLikeComment({
+    required String commentId,
+    required String userId,
+    required String username,
+    required String userPhotoUrl,
+  });
   Future<int> getCommentCount(String postId);
 }

@@ -1,5 +1,5 @@
 // lib/repo/notification_repo.dart
-import '../models/notification_model.dart';
+import 'package:conexus/model/notification_model.dart';
 
 abstract class NotificationRepo {
   Stream<List<NotificationModel>> getNotifications(String userId);
@@ -14,4 +14,6 @@ abstract class NotificationRepo {
   });
 
   Future<void> markAsRead(String notificationId);
+
+  Future<void> markAllAsRead(String userId, List<String> notificationIds);
 }

@@ -1,7 +1,7 @@
 // lib/repo/notification_repo_impl.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:conexus/model/notification_model.dart';
 
-import '../models/notification_model.dart';
 import 'notification_repo.dart';
 
 class NotificationRepoImpl implements NotificationRepo {
@@ -53,5 +53,18 @@ class NotificationRepoImpl implements NotificationRepo {
     await _firestore.collection('notifications').doc(notificationId).update({
       'isRead': true,
     });
+  }
+
+  @override
+  Future<void> markAllAsRead(
+    String userId,
+    List<String> notificationIds,
+  ) async {
+    final batch = _firestore.batch();
+    for (final id in notificationIds) {
+      final ref = _firestore.collection('notifications').doc(id);
+      batch.update(ref, {'isRead': true});
+    }
+    await batch.commit();
   }
 }

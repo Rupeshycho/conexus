@@ -1,8 +1,8 @@
 // lib/repo/comment_repo_impl.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:conexus/model/comment_model.dart';
+import 'package:conexus/model/notification_model.dart';
 
-import '../models/comment_model.dart';
-import '../models/notification_model.dart';
 import 'comment_repo.dart';
 import 'notification_repo.dart';
 
@@ -95,20 +95,43 @@ class CommentRepoImpl implements CommentRepo {
   }
 
   @override
-  Future<void> toggleLikeComment(String commentId, String userId) async {
+  Future<void> toggleLikeComment({
+    required String commentId,
+    required String userId,
+    required String username,
+    required String userPhotoUrl,
+  }) async {
     final commentRef = _firestore.collection('comments').doc(commentId);
     final snap = await commentRef.get();
     final data = snap.data() as Map<String, dynamic>?;
-    final likedBy = List<String>.from(data?['likedBy'] ?? []);
+    if (data == null) return;
 
-    if (likedBy.contains(userId)) {
+    final likedBy = List<String>.from(data['likedBy'] ?? []);
+    final isLiked = likedBy.contains(userId);
+
+    if (isLiked) {
       await commentRef.update({
         'likedBy': FieldValue.arrayRemove([userId]),
       });
-    } else {
-      await commentRef.update({
-        'likedBy': FieldValue.arrayUnion([userId]),
-      });
+      return; // no notification on unlike
+    }
+
+    await commentRef.update({
+      'likedBy': FieldValue.arrayUnion([userId]),
+    });
+
+    final commentAuthorId = data['authorId'] as String?;
+    final postId = data['postId'] as String? ?? '';
+
+    if (commentAuthorId != null && commentAuthorId != userId) {
+      await _notificationRepo.createNotification(
+        type: NotificationType.like,
+        postId: postId,
+        fromUserId: userId,
+        fromUsername: username,
+        fromUserPhotoUrl: userPhotoUrl,
+        toUserId: commentAuthorId,
+      );
     }
   }
 
