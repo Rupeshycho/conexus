@@ -1,63 +1,67 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'register.dart';
-import 'forgot_password.dart';
-import 'package:conexus/services/auth_service.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  final AuthService? authService; // 👈 optional, for testing
-
-  const LoginScreen({super.key, this.authService});
+  const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState(authService: authService);
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
   bool visibility = true;
-
-  final AuthService _authService;
-
-  _LoginScreenState({AuthService? authService})
-      : _authService = authService ?? AuthService();
+  bool isLoading = false;
 
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
 
   Future<void> loginUser() async {
-    if (emailController.text.trim().isEmpty ||
-        passwordController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please enter email and password")),
-      );
-      return;
-    }
+    setState(() => isLoading = true);
 
     try {
-      User? user = await _authService.login(
-        emailController.text.trim().toLowerCase(),
-        passwordController.text.trim(),
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
       );
 
-      if (user != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SignupScreen(), // 👈 your home screen name
-          ),
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      print("🔴 CODE: ${e.code}");
-      print("🔴 MSG: ${e.message}");
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message ?? "Login Failed"),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text("Login Successful")),
       );
+
+      // pushAndRemoveUntil (not pushReplacement) clears the *entire*
+      // stack, not just this screen — so if Login was reached via a
+      // splash/welcome screen, back from Home won't land there either.
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+            (route) => false,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? "Login Failed")),
+      );
+    } catch (e) {
+      // Covers non-Firebase failures (no internet, etc.) that the
+      // original code silently swallowed.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Something went wrong. Please try again.")),
+      );
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -95,6 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: Column(
                   children: [
+
                     Text(
                       "Welcome Back",
                       style: TextStyle(
@@ -177,12 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       alignment: Alignment.centerRight,
                       child: GestureDetector(
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ForgotPasswordScreen(),
-                            ),
-                          );
+                          // TODO: navigate to forgot password screen
                         },
                         child: Text(
                           "Forgot Password?",
@@ -206,10 +206,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(30),
                           ),
                         ),
-                        onPressed: () async {
-                          await loginUser();
-                        },
-                        child: Text(
+                        onPressed: isLoading ? null : loginUser,
+                        child: isLoading
+                            ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                            : Text(
                           "Login",
                           style: TextStyle(
                             color: Colors.white,
@@ -237,8 +244,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     SizedBox(height: 20),
 
-                    Wrap(
-                      alignment: WrapAlignment.center,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           "Don't have an account? ",
@@ -263,6 +270,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
+
                   ],
                 ),
               ),
