@@ -1,12 +1,18 @@
+// lib/view/home_screen.dart
+import 'package:conexus/viewmodel/user_view_model.dart';
+import 'package:conexus/widgets/story_row.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import 'create_image_post.dart';
+import 'create_text_post.dart';
 import 'home_feed.dart';
-import 'search_screen.dart';
-import 'widgets/story_row.dart';
-import 'settings_screen.dart';
 import 'notification_screen.dart';
-
-
+import 'profile_screen.dart';
+import 'search_screen.dart';
+import 'send_message.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,29 +24,102 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int selectedIndex = 0;
 
-  // TODO: replace with your real logged-in user's uid + photoUrl
-  final String currentUserId = 'CURRENT_USER_ID';
-  final String currentUserPhotoUrl = '';
-
   final List<String> screenNames = [
     "Home Feed ",
     "Search Users",
     "Add Posts/Reels",
-    "View Reels",
     "Chats",
   ];
 
+  // Shows a picker so the person can choose Image or Text post, then
+  // pushes the matching create screen.
+  void _openCreatePostPicker({
+    required String currentUserId,
+    required String currentUsername,
+    required String? currentUserAvatar,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.add_photo_alternate),
+              title: const Text('Image Post'),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CreateImagePostScreen(
+                      currentUserId: currentUserId,
+                      currentUsername: currentUsername,
+                      currentUserAvatar: currentUserAvatar,
+                    ),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.text_fields),
+              title: const Text('Text Post'),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CreateTextPostScreen(
+                      currentUserId: currentUserId,
+                      currentUsername: currentUsername,
+                      currentUserAvatar: currentUserAvatar,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Real signed-in user, no more placeholder TODOs.
+    final userViewModel = context.watch<UserViewModel>();
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    // Matches the getter EditProfile/ProfileScreen use (currentUser),
+    // instead of the old `.user` getter that likely doesn't exist.
+    final currentUserPhotoUrl = userViewModel.currentUser?.profileImage ?? '';
+    // Adjust this getter name if your UserViewModel exposes it differently
+    // (e.g. displayName, name) — used when publishing a new post.
+    final currentUsername =
+        userViewModel.currentUser?.username ??
+        FirebaseAuth.instance.currentUser?.displayName ??
+        'User';
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 1,
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: CircleAvatar(
-            backgroundColor: Colors.orange.shade100,
-            child: const Icon(Icons.person, color: Colors.black),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
+            child: CircleAvatar(
+              backgroundColor: Colors.orange.shade100,
+              backgroundImage: currentUserPhotoUrl.isNotEmpty
+                  ? NetworkImage(currentUserPhotoUrl)
+                  : null,
+              child: currentUserPhotoUrl.isEmpty
+                  ? const Icon(Icons.person, color: Colors.black)
+                  : null,
+            ),
           ),
         ),
         title: const Text(
@@ -55,11 +134,10 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             onPressed: () {
-              // TODO: replace with your actual settings screen
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(builder: (context) => ),
-              // );
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
             },
             icon: const Icon(
               Icons.settings_outlined,
@@ -69,10 +147,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           IconButton(
             onPressed: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(builder: (context) => ),
-              // );
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationScreen()),
+              );
             },
             icon: const Icon(
               Icons.notifications_none,
@@ -94,12 +172,21 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: IndexedStack(
               index: selectedIndex,
-              children: const [
-                HomeFeed(),
-                SearchScreen(),
-                Center(child: Text("Add Posts/Reels")),
-                Center(child: Text("View Reels")),
-                Center(child: Text("Chats")),
+              children: [
+                const HomeFeed(),
+                const SearchScreen(),
+                // CREATE tab: opens the Image/Text picker as soon as it's
+                // shown, and falls back to a tappable prompt otherwise.
+                _CreatePostTab(
+                  onOpenPicker: () => _openCreatePostPicker(
+                    currentUserId: currentUserId,
+                    currentUsername: currentUsername,
+                    currentUserAvatar: currentUserPhotoUrl.isEmpty
+                        ? null
+                        : currentUserPhotoUrl,
+                  ),
+                ),
+                const MessageFrame(),
               ],
             ),
           ),
@@ -116,11 +203,10 @@ class _HomeScreenState extends State<HomeScreen> {
               navItem(icon: Icons.home, label: "HOME", index: 0),
               navItem(icon: Icons.search, label: "SEARCH", index: 1),
               navItem(icon: Icons.add_box_outlined, label: "CREATE", index: 2),
-              navItem(icon: Icons.video_collection, label: "REELS", index: 3),
               navItem(
                 icon: Icons.chat_bubble_outline,
                 label: "CHATS",
-                index: 4,
+                index: 3,
               ),
             ],
           ),
@@ -150,6 +236,38 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Content shown for the CREATE tab: a simple prompt that opens the
+/// post-type picker, either automatically on first appearance or via tap.
+class _CreatePostTab extends StatefulWidget {
+  final VoidCallback onOpenPicker;
+
+  const _CreatePostTab({required this.onOpenPicker});
+
+  @override
+  State<_CreatePostTab> createState() => _CreatePostTabState();
+}
+
+class _CreatePostTabState extends State<_CreatePostTab> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onOpenPicker();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: TextButton.icon(
+        onPressed: widget.onOpenPicker,
+        icon: const Icon(Icons.add_circle_outline, size: 32),
+        label: const Text('Create a post', style: TextStyle(fontSize: 16)),
       ),
     );
   }
