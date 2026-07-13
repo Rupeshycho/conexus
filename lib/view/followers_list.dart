@@ -13,7 +13,7 @@ class FollowersList extends StatefulWidget {
 }
 
 class _FollowersListState extends State<FollowersList> {
-  Map<String, String> userNames = {};
+  Map<String, dynamic> userData = {}; // stores the full UserModel per uid
 
   @override
   void initState() {
@@ -23,19 +23,19 @@ class _FollowersListState extends State<FollowersList> {
 
   Future<void> _loadUserNames() async {
     final userVM = context.read<UserViewModel>();
-    Map<String, String> names = {};
+    Map<String, dynamic> data = {};
 
     for (String uid in widget.followers) {
       try {
         final user = await userVM.getUser(uid);
-        names[uid] = user.name.isEmpty ? user.username : user.name;
+        data[uid] = user;
       } catch (e) {
-        names[uid] = "Unknown User";
+        data[uid] = null;
       }
     }
 
     setState(() {
-      userNames = names;
+      userData = data;
     });
   }
 
@@ -61,12 +61,21 @@ class _FollowersListState extends State<FollowersList> {
         itemCount: widget.followers.length,
         itemBuilder: (context, index) {
           final uid = widget.followers[index];
-          final name = userNames[uid] ?? "Loading...";
+          final user = userData[uid];
+          final name = user == null
+              ? (userData.containsKey(uid) ? "Unknown User" : "Loading...")
+              : (user.name.isEmpty ? user.username : user.name);
+          final imageUrl = user?.profileImage as String?;
 
           return ListTile(
-            leading: const CircleAvatar(
+            leading: CircleAvatar(
               backgroundColor: Colors.deepOrange,
-              child: Icon(Icons.person, color: Colors.white),
+              backgroundImage: (imageUrl != null && imageUrl.isNotEmpty)
+                  ? NetworkImage(imageUrl)
+                  : null,
+              child: (imageUrl == null || imageUrl.isEmpty)
+                  ? const Icon(Icons.person, color: Colors.white)
+                  : null,
             ),
             title: Text(name),
             subtitle: Text("@$uid"),
