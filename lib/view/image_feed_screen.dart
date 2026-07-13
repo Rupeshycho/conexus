@@ -28,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
     "Home Feed ",
     "Search Users",
     "Add Posts/Reels",
+    "View Reels",
     "Chats",
   ];
 
@@ -83,6 +84,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Pushes ProfileScreen. Pulled into its own method so both the avatar
+  // and anything else that needs "go to my profile" can call it.
+  void _openProfileScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Real signed-in user, no more placeholder TODOs.
@@ -103,21 +113,23 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 1,
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
-            },
-            child: CircleAvatar(
-              backgroundColor: Colors.orange.shade100,
-              backgroundImage: currentUserPhotoUrl.isNotEmpty
-                  ? NetworkImage(currentUserPhotoUrl)
-                  : null,
-              child: currentUserPhotoUrl.isEmpty
-                  ? const Icon(Icons.person, color: Colors.black)
-                  : null,
+          // Material + InkWell instead of GestureDetector so the avatar
+          // gets a visible ripple/tap-highlight, clipped to the circle.
+          child: Material(
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: _openProfileScreen,
+              child: CircleAvatar(
+                backgroundColor: Colors.orange.shade100,
+                backgroundImage: currentUserPhotoUrl.isNotEmpty
+                    ? NetworkImage(currentUserPhotoUrl)
+                    : null,
+                child: currentUserPhotoUrl.isEmpty
+                    ? const Icon(Icons.person, color: Colors.black)
+                    : null,
+              ),
             ),
           ),
         ),
@@ -185,6 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         : currentUserPhotoUrl,
                   ),
                 ),
+                const Center(child: Text("View Reels")),
                 const MessageFrame(),
               ],
             ),
@@ -202,10 +215,11 @@ class _HomeScreenState extends State<HomeScreen> {
               navItem(icon: Icons.home, label: "HOME", index: 0),
               navItem(icon: Icons.search, label: "SEARCH", index: 1),
               navItem(icon: Icons.add_box_outlined, label: "CREATE", index: 2),
+              navItem(icon: Icons.video_collection, label: "REELS", index: 3),
               navItem(
                 icon: Icons.chat_bubble_outline,
                 label: "CHATS",
-                index: 3,
+                index: 4,
               ),
             ],
           ),

@@ -57,24 +57,12 @@ class PostCard extends StatelessWidget {
                       const PopupMenuItem(value: 'edit', child: Text('Edit')),
                       const PopupMenuItem(
                         value: 'delete',
-                        child: Text(
-                          'Delete',
-                          style: TextStyle(color: Colors.red),
-                        ),
+                        child: Text('Delete', style: TextStyle(color: Colors.red)),
                       ),
                     ] else ...[
-                      const PopupMenuItem(
-                        value: 'interested',
-                        child: Text('Interested'),
-                      ),
-                      const PopupMenuItem(
-                        value: 'not_interested',
-                        child: Text('Not interested'),
-                      ),
-                      const PopupMenuItem(
-                        value: 'report',
-                        child: Text('Report'),
-                      ),
+                      const PopupMenuItem(value: 'interested', child: Text('Interested')),
+                      const PopupMenuItem(value: 'not_interested', child: Text('Not interested')),
+                      const PopupMenuItem(value: 'report', child: Text('Report')),
                     ],
                   ],
                 ),

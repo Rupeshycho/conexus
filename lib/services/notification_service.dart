@@ -1,24 +1,24 @@
-import 'dart:convert';
 import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:conexus/view/message_individual_frame.dart';
-import 'package:conexus/view/group_chat_screen.dart';
-import 'package:conexus/view/incoming_call_dialog.dart';
-import 'package:conexus/view/video_call_screen.dart';
+import 'dart:convert';
 
+import 'package:audioplayers/audioplayers.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 // Matches main.dart, which initializes Firebase with
 // `options: DefaultFirebaseOptions.currentPlatform`. Background isolates
 // get no implicit config from the main isolate, so these entry points
 // must pass the same options explicitly or init can silently resolve to
 // the wrong (or no) project config.
 import 'package:conexus/firebase_options.dart';
+import 'package:conexus/view/group_chat_screen.dart';
+import 'package:conexus/view/incoming_call_dialog.dart';
+import 'package:conexus/view/message_individual_frame.dart';
+import 'package:conexus/view/video_call_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// FIX (reply silently drops for push-originated notifications): the
 /// Firestore-listener path always builds `chatId`/`senderId` explicitly,
@@ -38,17 +38,25 @@ String? _firstNonEmpty(Map<String, dynamic> data, List<String> keys) {
 }
 
 const List<String> _chatIdKeys = ['chatId', 'roomId', 'room_id', 'chat_id'];
-const List<String> _senderIdKeys = ['senderId', 'sender_id', 'senderID', 'from', 'fromUserId'];
+const List<String> _senderIdKeys = [
+  'senderId',
+  'sender_id',
+  'senderID',
+  'from',
+  'fromUserId',
+];
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
 
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
   final AudioPlayer _ringtonePlayer = AudioPlayer();
   final AudioPlayer _messagePlayer = AudioPlayer();
 
@@ -105,7 +113,9 @@ class NotificationService {
     if (context != null && context.mounted) {
       navigate();
     } else {
-      debugPrint("NotificationService: navigatorKey not attached yet, queuing navigation");
+      debugPrint(
+        "NotificationService: navigatorKey not attached yet, queuing navigation",
+      );
       _pendingNavigation = navigate;
     }
   }
@@ -122,15 +132,15 @@ class NotificationService {
       _pendingNavigation = null;
       nav();
     } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) => flushPendingNavigation());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => flushPendingNavigation(),
+      );
     }
   }
 
   Future<void> init() async {
     try {
-      await [
-        Permission.notification,
-      ].request();
+      await [Permission.notification].request();
 
       await _initLocalNotifications();
 
@@ -145,7 +155,9 @@ class NotificationService {
         await _setUpFcmToken();
 
         _onMessageSubscription?.cancel();
-        _onMessageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        _onMessageSubscription = FirebaseMessaging.onMessage.listen((
+          RemoteMessage message,
+        ) {
           if (message.notification != null) {
             unawaited(_playMessageSound());
 
@@ -160,9 +172,11 @@ class NotificationService {
             if (senderId != null) normalizedData['senderId'] = senderId;
 
             if (chatId == null || senderId == null) {
-              debugPrint("NotificationService: push data missing chatId/senderId after normalization. "
-                  "Raw keys: ${message.data.keys.toList()} — reply for this notification will not work "
-                  "until the backend sends one of $_chatIdKeys / $_senderIdKeys.");
+              debugPrint(
+                "NotificationService: push data missing chatId/senderId after normalization. "
+                "Raw keys: ${message.data.keys.toList()} — reply for this notification will not work "
+                "until the backend sends one of $_chatIdKeys / $_senderIdKeys.",
+              );
             }
 
             _showLocalNotification(
@@ -182,7 +196,9 @@ class NotificationService {
       }
 
       _authSubscription?.cancel();
-      _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
+      _authSubscription = FirebaseAuth.instance.authStateChanges().listen((
+        user,
+      ) {
         if (user != null) {
           _startListeningToFirestore(user.uid);
           saveToken();
@@ -205,7 +221,9 @@ class NotificationService {
       if (token != null) _saveTokenToFirestore(token);
 
       _tokenRefreshSubscription?.cancel();
-      _tokenRefreshSubscription = _fcm.onTokenRefresh.listen(_saveTokenToFirestore);
+      _tokenRefreshSubscription = _fcm.onTokenRefresh.listen(
+        _saveTokenToFirestore,
+      );
 
       _fcmRetryCount = 0;
     } catch (e, stackTrace) {
@@ -218,9 +236,11 @@ class NotificationService {
         _fcmRetryTimer?.cancel();
         _fcmRetryTimer = Timer(delay, _setUpFcmToken);
       } else {
-        debugPrint("FCM token setup: giving up after $_maxFcmRetries retries — "
-            "push notifications via FCM will be unavailable, but "
-            "Firestore-based in-app notifications will still work.");
+        debugPrint(
+          "FCM token setup: giving up after $_maxFcmRetries retries — "
+          "push notifications via FCM will be unavailable, but "
+          "Firestore-based in-app notifications will still work.",
+        );
       }
     }
   }
@@ -230,28 +250,36 @@ class NotificationService {
 
     try {
       final androidImplementation = _localNotificationsPlugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
 
-      await androidImplementation?.createNotificationChannel(const AndroidNotificationChannel(
-        'conexus_channel_id',
-        'Conexus Messages',
-        description: 'Notifications for new messages',
-        importance: Importance.max,
-        playSound: true,
-      ));
+      await androidImplementation?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'conexus_channel_id',
+          'Conexus Messages',
+          description: 'Notifications for new messages',
+          importance: Importance.max,
+          playSound: true,
+        ),
+      );
 
-      await androidImplementation?.createNotificationChannel(const AndroidNotificationChannel(
-        'conexus_call_channel_id',
-        'Conexus Calls',
-        description: 'Notifications for incoming calls',
-        importance: Importance.max,
-        playSound: true,
-        enableVibration: true,
-      ));
+      await androidImplementation?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'conexus_call_channel_id',
+          'Conexus Calls',
+          description: 'Notifications for incoming calls',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
 
       await androidImplementation?.requestNotificationsPermission();
 
-      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidSettings = AndroidInitializationSettings(
+        '@mipmap/ic_launcher',
+      );
 
       final iosSettings = DarwinInitializationSettings(
         requestAlertPermission: true,
@@ -268,9 +296,7 @@ class NotificationService {
                 placeholder: 'Type your message...',
               ),
             ],
-            options: {
-              DarwinNotificationCategoryOption.customDismissAction,
-            },
+            options: {DarwinNotificationCategoryOption.customDismissAction},
           ),
           DarwinNotificationCategory(
             _iosCallCategoryId,
@@ -286,9 +312,7 @@ class NotificationService {
                 options: {DarwinNotificationActionOption.destructive},
               ),
             ],
-            options: {
-              DarwinNotificationCategoryOption.customDismissAction,
-            },
+            options: {DarwinNotificationCategoryOption.customDismissAction},
           ),
         ],
       );
@@ -317,14 +341,19 @@ class NotificationService {
       // queues navigation via `_tryNavigateOrQueue` instead of
       // requiring `navigatorKey` to already be attached.
       try {
-        final launchDetails = await _localNotificationsPlugin.getNotificationAppLaunchDetails();
+        final launchDetails = await _localNotificationsPlugin
+            .getNotificationAppLaunchDetails();
         if (launchDetails?.didNotificationLaunchApp == true &&
             launchDetails?.notificationResponse != null) {
-          debugPrint("NotificationService: app was launched by a notification tap, replaying it");
+          debugPrint(
+            "NotificationService: app was launched by a notification tap, replaying it",
+          );
           _handleNotificationResponse(launchDetails!.notificationResponse!);
         }
       } catch (e) {
-        debugPrint("NotificationService: getNotificationAppLaunchDetails failed: $e");
+        debugPrint(
+          "NotificationService: getNotificationAppLaunchDetails failed: $e",
+        );
       }
     } catch (e, stackTrace) {
       debugPrint("Local notification init failed: $e");
@@ -342,93 +371,115 @@ class NotificationService {
         .collection('chat_rooms')
         .where('participants', arrayContains: currentUserId)
         .snapshots()
-        .listen((snapshot) {
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        final roomId = doc.id;
-        final lastMsg = data['lastMessage'] as String? ?? '';
-        final lastMsgSenderId = data['lastMessageSenderId'] as String? ?? '';
-        final msgTime = (data['lastMessageTime'] as Timestamp?) ?? Timestamp.now();
+        .listen(
+          (snapshot) {
+            for (var doc in snapshot.docs) {
+              final data = doc.data();
+              final roomId = doc.id;
+              final lastMsg = data['lastMessage'] as String? ?? '';
+              final lastMsgSenderId =
+                  data['lastMessageSenderId'] as String? ?? '';
+              final msgTime =
+                  (data['lastMessageTime'] as Timestamp?) ?? Timestamp.now();
 
-        if (lastMsgSenderId == currentUserId || lastMsg.isEmpty) continue;
+              if (lastMsgSenderId == currentUserId || lastMsg.isEmpty) continue;
 
-        if (ChatScreen.activeChatUserId == lastMsgSenderId || GroupChatScreen.activeChatRoomId == roomId) {
-          _lastMessageNotifiedTimes[roomId] = msgTime;
-          continue;
-        }
+              if (ChatScreen.activeChatUserId == lastMsgSenderId ||
+                  GroupChatScreen.activeChatRoomId == roomId) {
+                _lastMessageNotifiedTimes[roomId] = msgTime;
+                continue;
+              }
 
-        final lastNotifiedTime = _lastMessageNotifiedTimes[roomId];
-        if (lastNotifiedTime == null || msgTime.compareTo(lastNotifiedTime) > 0) {
-          _lastMessageNotifiedTimes[roomId] = msgTime;
-          final isGroup = data['isGroup'] == true;
-          final names = Map<String, dynamic>.from(data['names'] ?? {});
-          final title = isGroup
-              ? (data['groupName'] ?? 'Group Message')
-              : (names[lastMsgSenderId] ?? 'New Message');
+              final lastNotifiedTime = _lastMessageNotifiedTimes[roomId];
+              if (lastNotifiedTime == null ||
+                  msgTime.compareTo(lastNotifiedTime) > 0) {
+                _lastMessageNotifiedTimes[roomId] = msgTime;
+                final isGroup = data['isGroup'] == true;
+                final names = Map<String, dynamic>.from(data['names'] ?? {});
+                final title = isGroup
+                    ? (data['groupName'] ?? 'Group Message')
+                    : (names[lastMsgSenderId] ?? 'New Message');
 
-          unawaited(_playMessageSound());
-          _showLocalNotification(
-            title.toString(),
-            isGroup ? "${names[lastMsgSenderId] ?? 'User'}: $lastMsg" : lastMsg,
-            data: {'chatId': roomId, 'senderId': lastMsgSenderId, 'isGroup': isGroup},
-            id: roomId.hashCode,
-          );
-        }
-      }
-      // A clean snapshot proves the listener is healthy again after any
-      // earlier error — clear the restart guard so a future drop can
-      // trigger a fresh restart.
-      _isRestartingMessageListener = false;
-    }, onError: (e) {
-      debugPrint("Message monitor error: $e");
-      _restartMessageListener();
-    });
+                unawaited(_playMessageSound());
+                _showLocalNotification(
+                  title.toString(),
+                  isGroup
+                      ? "${names[lastMsgSenderId] ?? 'User'}: $lastMsg"
+                      : lastMsg,
+                  data: {
+                    'chatId': roomId,
+                    'senderId': lastMsgSenderId,
+                    'isGroup': isGroup,
+                  },
+                  id: roomId.hashCode,
+                );
+              }
+            }
+            // A clean snapshot proves the listener is healthy again after any
+            // earlier error — clear the restart guard so a future drop can
+            // trigger a fresh restart.
+            _isRestartingMessageListener = false;
+          },
+          onError: (e) {
+            debugPrint("Message monitor error: $e");
+            _restartMessageListener();
+          },
+        );
 
     // CALL MONITOR
     _callSubscription = FirebaseFirestore.instance
         .collection('calls')
         .where('receiverId', isEqualTo: currentUserId)
         .snapshots()
-        .listen((snapshot) {
-      _isRestartingCallListener = false;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        final callId = doc.id;
-        final status = data['status'] as String? ?? 'dialing';
-        final callerId = data['callerId'] as String? ?? '';
-        final timestamp = data['timestamp'] as Timestamp?;
+        .listen(
+          (snapshot) {
+            _isRestartingCallListener = false;
+            for (var doc in snapshot.docs) {
+              final data = doc.data();
+              final callId = doc.id;
+              final status = data['status'] as String? ?? 'dialing';
+              final callerId = data['callerId'] as String? ?? '';
+              final timestamp = data['timestamp'] as Timestamp?;
 
-        if (callerId == currentUserId) continue;
-        if (timestamp != null && DateTime.now().difference(timestamp.toDate()).abs().inMinutes > 5) continue;
+              if (callerId == currentUserId) continue;
+              if (timestamp != null &&
+                  DateTime.now()
+                          .difference(timestamp.toDate())
+                          .abs()
+                          .inMinutes >
+                      5)
+                continue;
 
-        if (status == 'dialing') {
-          if (!_processedCallIds.contains(callId)) {
-            _processedCallIds.add(callId);
-            try {
-              _handleIncomingCall(callId, data);
-            } catch (e, stackTrace) {
-              debugPrint("Error handling incoming call $callId: $e");
-              debugPrintStack(stackTrace: stackTrace);
-              _processedCallIds.remove(callId);
+              if (status == 'dialing') {
+                if (!_processedCallIds.contains(callId)) {
+                  _processedCallIds.add(callId);
+                  try {
+                    _handleIncomingCall(callId, data);
+                  } catch (e, stackTrace) {
+                    debugPrint("Error handling incoming call $callId: $e");
+                    debugPrintStack(stackTrace: stackTrace);
+                    _processedCallIds.remove(callId);
+                  }
+                }
+              } else {
+                if (_activeRingingCallId == callId) {
+                  _stopRingtone();
+                  _activeRingingCallId = null;
+                }
+                _localNotificationsPlugin.cancel(callId.hashCode);
+                _processedCallIds.remove(callId);
+              }
             }
-          }
-        } else {
-          if (_activeRingingCallId == callId) {
-            _stopRingtone();
-            _activeRingingCallId = null;
-          }
-          _localNotificationsPlugin.cancel(callId.hashCode);
-          _processedCallIds.remove(callId);
-        }
-      }
-    }, onError: (e) {
-      debugPrint("Call monitor error: $e");
-      // Incoming-call detection is the most call-critical listener in
-      // this service — a silent drop here means missed calls never
-      // ring at all, so this restarts more aggressively than the
-      // message monitor.
-      _restartCallListener();
-    });
+          },
+          onError: (e) {
+            debugPrint("Call monitor error: $e");
+            // Incoming-call detection is the most call-critical listener in
+            // this service — a silent drop here means missed calls never
+            // ring at all, so this restarts more aggressively than the
+            // message monitor.
+            _restartCallListener();
+          },
+        );
   }
 
   /// Restarts just the message-monitor half of Firestore listening for
@@ -440,51 +491,65 @@ class NotificationService {
     _isRestartingMessageListener = true;
 
     Future.delayed(const Duration(seconds: 3), () {
-      if (_currentListeningUid != uid) return; // user changed/signed out meanwhile
+      if (_currentListeningUid != uid)
+        return; // user changed/signed out meanwhile
       _messageSubscription?.cancel();
       _messageSubscription = FirebaseFirestore.instance
           .collection('chat_rooms')
           .where('participants', arrayContains: uid)
           .snapshots()
-          .listen((snapshot) {
-        for (var doc in snapshot.docs) {
-          final data = doc.data();
-          final roomId = doc.id;
-          final lastMsg = data['lastMessage'] as String? ?? '';
-          final lastMsgSenderId = data['lastMessageSenderId'] as String? ?? '';
-          final msgTime = (data['lastMessageTime'] as Timestamp?) ?? Timestamp.now();
+          .listen(
+            (snapshot) {
+              for (var doc in snapshot.docs) {
+                final data = doc.data();
+                final roomId = doc.id;
+                final lastMsg = data['lastMessage'] as String? ?? '';
+                final lastMsgSenderId =
+                    data['lastMessageSenderId'] as String? ?? '';
+                final msgTime =
+                    (data['lastMessageTime'] as Timestamp?) ?? Timestamp.now();
 
-          if (lastMsgSenderId == uid || lastMsg.isEmpty) continue;
+                if (lastMsgSenderId == uid || lastMsg.isEmpty) continue;
 
-          if (ChatScreen.activeChatUserId == lastMsgSenderId || GroupChatScreen.activeChatRoomId == roomId) {
-            _lastMessageNotifiedTimes[roomId] = msgTime;
-            continue;
-          }
+                if (ChatScreen.activeChatUserId == lastMsgSenderId ||
+                    GroupChatScreen.activeChatRoomId == roomId) {
+                  _lastMessageNotifiedTimes[roomId] = msgTime;
+                  continue;
+                }
 
-          final lastNotifiedTime = _lastMessageNotifiedTimes[roomId];
-          if (lastNotifiedTime == null || msgTime.compareTo(lastNotifiedTime) > 0) {
-            _lastMessageNotifiedTimes[roomId] = msgTime;
-            final isGroup = data['isGroup'] == true;
-            final names = Map<String, dynamic>.from(data['names'] ?? {});
-            final title = isGroup
-                ? (data['groupName'] ?? 'Group Message')
-                : (names[lastMsgSenderId] ?? 'New Message');
+                final lastNotifiedTime = _lastMessageNotifiedTimes[roomId];
+                if (lastNotifiedTime == null ||
+                    msgTime.compareTo(lastNotifiedTime) > 0) {
+                  _lastMessageNotifiedTimes[roomId] = msgTime;
+                  final isGroup = data['isGroup'] == true;
+                  final names = Map<String, dynamic>.from(data['names'] ?? {});
+                  final title = isGroup
+                      ? (data['groupName'] ?? 'Group Message')
+                      : (names[lastMsgSenderId] ?? 'New Message');
 
-            unawaited(_playMessageSound());
-            _showLocalNotification(
-              title.toString(),
-              isGroup ? "${names[lastMsgSenderId] ?? 'User'}: $lastMsg" : lastMsg,
-              data: {'chatId': roomId, 'senderId': lastMsgSenderId, 'isGroup': isGroup},
-              id: roomId.hashCode,
-            );
-          }
-        }
-        _isRestartingMessageListener = false;
-      }, onError: (e) {
-        debugPrint("Message monitor error (post-restart): $e");
-        _isRestartingMessageListener = false;
-        _restartMessageListener();
-      });
+                  unawaited(_playMessageSound());
+                  _showLocalNotification(
+                    title.toString(),
+                    isGroup
+                        ? "${names[lastMsgSenderId] ?? 'User'}: $lastMsg"
+                        : lastMsg,
+                    data: {
+                      'chatId': roomId,
+                      'senderId': lastMsgSenderId,
+                      'isGroup': isGroup,
+                    },
+                    id: roomId.hashCode,
+                  );
+                }
+              }
+              _isRestartingMessageListener = false;
+            },
+            onError: (e) {
+              debugPrint("Message monitor error (post-restart): $e");
+              _isRestartingMessageListener = false;
+              _restartMessageListener();
+            },
+          );
     });
   }
 
@@ -502,49 +567,60 @@ class NotificationService {
           .collection('calls')
           .where('receiverId', isEqualTo: uid)
           .snapshots()
-          .listen((snapshot) {
-        _isRestartingCallListener = false;
-        for (var doc in snapshot.docs) {
-          final data = doc.data();
-          final callId = doc.id;
-          final status = data['status'] as String? ?? 'dialing';
-          final callerId = data['callerId'] as String? ?? '';
-          final timestamp = data['timestamp'] as Timestamp?;
+          .listen(
+            (snapshot) {
+              _isRestartingCallListener = false;
+              for (var doc in snapshot.docs) {
+                final data = doc.data();
+                final callId = doc.id;
+                final status = data['status'] as String? ?? 'dialing';
+                final callerId = data['callerId'] as String? ?? '';
+                final timestamp = data['timestamp'] as Timestamp?;
 
-          if (callerId == uid) continue;
-          if (timestamp != null && DateTime.now().difference(timestamp.toDate()).abs().inMinutes > 5) continue;
+                if (callerId == uid) continue;
+                if (timestamp != null &&
+                    DateTime.now()
+                            .difference(timestamp.toDate())
+                            .abs()
+                            .inMinutes >
+                        5)
+                  continue;
 
-          if (status == 'dialing') {
-            if (!_processedCallIds.contains(callId)) {
-              _processedCallIds.add(callId);
-              try {
-                _handleIncomingCall(callId, data);
-              } catch (e, stackTrace) {
-                debugPrint("Error handling incoming call $callId: $e");
-                debugPrintStack(stackTrace: stackTrace);
-                _processedCallIds.remove(callId);
+                if (status == 'dialing') {
+                  if (!_processedCallIds.contains(callId)) {
+                    _processedCallIds.add(callId);
+                    try {
+                      _handleIncomingCall(callId, data);
+                    } catch (e, stackTrace) {
+                      debugPrint("Error handling incoming call $callId: $e");
+                      debugPrintStack(stackTrace: stackTrace);
+                      _processedCallIds.remove(callId);
+                    }
+                  }
+                } else {
+                  if (_activeRingingCallId == callId) {
+                    _stopRingtone();
+                    _activeRingingCallId = null;
+                  }
+                  _localNotificationsPlugin.cancel(callId.hashCode);
+                  _processedCallIds.remove(callId);
+                }
               }
-            }
-          } else {
-            if (_activeRingingCallId == callId) {
-              _stopRingtone();
-              _activeRingingCallId = null;
-            }
-            _localNotificationsPlugin.cancel(callId.hashCode);
-            _processedCallIds.remove(callId);
-          }
-        }
-      }, onError: (e) {
-        debugPrint("Call monitor error (post-restart): $e");
-        _isRestartingCallListener = false;
-        _restartCallListener();
-      });
+            },
+            onError: (e) {
+              debugPrint("Call monitor error (post-restart): $e");
+              _isRestartingCallListener = false;
+              _restartCallListener();
+            },
+          );
     });
   }
 
   void _handleIncomingCall(String callId, Map<String, dynamic> data) {
     if (_activeCallDialogId != null) {
-      debugPrint("Ignoring incoming call $callId — dialog already showing for $_activeCallDialogId");
+      debugPrint(
+        "Ignoring incoming call $callId — dialog already showing for $_activeCallDialogId",
+      );
       return;
     }
 
@@ -590,13 +666,15 @@ class NotificationService {
   Future<void> _startRingtone() async {
     try {
       _ringtonePlayer.audioCache.prefix = '';
-      await _ringtonePlayer.setAudioContext(AudioContext(
-        android: AudioContextAndroid(
-          contentType: AndroidContentType.music,
-          usageType: AndroidUsageType.notificationRingtone,
-          audioFocus: AndroidAudioFocus.gainTransient,
+      await _ringtonePlayer.setAudioContext(
+        AudioContext(
+          android: AudioContextAndroid(
+            contentType: AndroidContentType.music,
+            usageType: AndroidUsageType.notificationRingtone,
+            audioFocus: AndroidAudioFocus.gainTransient,
+          ),
         ),
-      ));
+      );
       await _ringtonePlayer.setReleaseMode(ReleaseMode.loop);
       await _ringtonePlayer.play(AssetSource('assets/Sounds/ringtone.mp3'));
     } catch (e) {
@@ -616,7 +694,9 @@ class NotificationService {
     try {
       _messagePlayer.audioCache.prefix = '';
       await _messagePlayer.play(AssetSource('assets/Sounds/ringtone.mp3'));
-      unawaited(Future.delayed(const Duration(seconds: 1), () => _messagePlayer.stop()));
+      unawaited(
+        Future.delayed(const Duration(seconds: 1), () => _messagePlayer.stop()),
+      );
     } catch (e) {
       debugPrint("Error playing message sound: $e");
     }
@@ -673,7 +753,9 @@ class NotificationService {
 
       if (callId != null && callerName != null) {
         try {
-          final docRef = FirebaseFirestore.instance.collection('calls').doc(callId);
+          final docRef = FirebaseFirestore.instance
+              .collection('calls')
+              .doc(callId);
 
           bool joinable = false;
           await FirebaseFirestore.instance.runTransaction((transaction) async {
@@ -718,13 +800,18 @@ class NotificationService {
           _tryNavigateOrQueue(() {
             final context = navigatorKey.currentContext;
             if (context == null || !context.mounted) return;
-            Navigator.push(context, MaterialPageRoute(builder: (_) => VideoCallScreen(
-              username: callerName,
-              isVideoEnabled: isVideo,
-              callId: callId,
-              isIncoming: true,
-              receiverId: callerId,
-            )));
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => VideoCallScreen(
+                  username: callerName,
+                  isVideoEnabled: isVideo,
+                  callId: callId,
+                  isIncoming: true,
+                  receiverId: callerId,
+                ),
+              ),
+            );
           });
         } catch (e) {
           debugPrint("Error accepting call: $e");
@@ -734,7 +821,10 @@ class NotificationService {
       final String? callId = data['callId']?.toString();
       if (callId != null) {
         IncomingCallDialog.markResolvedExternally(callId);
-        FirebaseFirestore.instance.collection('calls').doc(callId).update({'status': 'declined'})
+        FirebaseFirestore.instance
+            .collection('calls')
+            .doc(callId)
+            .update({'status': 'declined'})
             .catchError((e) => debugPrint("Error declining call: $e"));
         _localNotificationsPlugin.cancel(callId.hashCode);
         _dismissActiveCallDialog(callId);
@@ -745,8 +835,10 @@ class NotificationService {
       if (chatId != null && senderId != null) {
         await _sendReplyFromNotification(chatId, senderId, response.input!);
       } else {
-        debugPrint("Foreground reply: missing chatId/senderId after fallback lookup. "
-            "payload keys were: ${data.keys.toList()}");
+        debugPrint(
+          "Foreground reply: missing chatId/senderId after fallback lookup. "
+          "payload keys were: ${data.keys.toList()}",
+        );
       }
     } else {
       _navigateToTarget(data);
@@ -767,10 +859,15 @@ class NotificationService {
       if (callId.isEmpty) return;
 
       try {
-        final snapshot = await FirebaseFirestore.instance.collection('calls').doc(callId).get();
+        final snapshot = await FirebaseFirestore.instance
+            .collection('calls')
+            .doc(callId)
+            .get();
         final status = snapshot.data()?['status'] as String?;
         if (!snapshot.exists || status != 'dialing') {
-          debugPrint("Skipping stale call notification for $callId (status: $status)");
+          debugPrint(
+            "Skipping stale call notification for $callId (status: $status)",
+          );
           return;
         }
       } catch (e) {
@@ -804,34 +901,62 @@ class NotificationService {
         });
       });
     } else if (data['senderId'] != null) {
-      final userSnap = await FirebaseFirestore.instance.collection('users').doc(data['senderId'].toString()).get();
+      final userSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(data['senderId'].toString())
+          .get();
       if (!userSnap.exists) return;
       final userData = userSnap.data();
       _tryNavigateOrQueue(() {
         final context = navigatorKey.currentContext;
         if (context == null || !context.mounted) return;
-        Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(
-          receiverId: data['senderId'].toString(),
-          username: userData?['name']?.toString() ?? 'User',
-          profileImage: userData?['profileImage']?.toString() ?? '',
-        )));
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatScreen(
+              receiverId: data['senderId'].toString(),
+              username: userData?['name']?.toString() ?? 'User',
+              profileImage: userData?['profileImage']?.toString() ?? '',
+            ),
+          ),
+        );
       });
     }
   }
 
-  Future<void> _sendReplyFromNotification(String chatId, String receiverId, String text) async {
+  Future<void> _sendReplyFromNotification(
+    String chatId,
+    String receiverId,
+    String text,
+  ) async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) return;
     try {
       final now = FieldValue.serverTimestamp();
-      await FirebaseFirestore.instance.collection('chat_rooms').doc(chatId).collection('messages').add({
-        'text': text, 'imageUrl': '', 'type': 'text', 'status': 'sent', 'isEdited': false,
-        'senderId': currentUserId, 'receiverId': receiverId, 'time': now, 'reactions': {}
-      });
-      await FirebaseFirestore.instance.collection('chat_rooms').doc(chatId).set({
-        'lastMessage': text, 'lastMessageSenderId': currentUserId, 'lastMessageTime': now,
-        'unreadCount.$receiverId': FieldValue.increment(1)
-      }, SetOptions(merge: true));
+      await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(chatId)
+          .collection('messages')
+          .add({
+            'text': text,
+            'imageUrl': '',
+            'type': 'text',
+            'status': 'sent',
+            'isEdited': false,
+            'senderId': currentUserId,
+            'receiverId': receiverId,
+            'time': now,
+            'reactions': {},
+          });
+      await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(chatId)
+          .set({
+            'lastMessage': text,
+            'lastMessageSenderId': currentUserId,
+            'lastMessageTime': now,
+            'unreadCount.$receiverId': FieldValue.increment(1),
+          }, SetOptions(merge: true));
     } catch (e) {
       debugPrint("Error sending reply from notification: $e");
     }
@@ -841,14 +966,22 @@ class NotificationService {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId != null) {
       try {
-        await FirebaseFirestore.instance.collection('users').doc(currentUserId).set({'fcmToken': token}, SetOptions(merge: true));
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUserId)
+            .set({'fcmToken': token}, SetOptions(merge: true));
       } catch (e) {
         debugPrint("Error saving FCM token: $e");
       }
     }
   }
 
-  void _showLocalNotification(String title, String body, {Map<String, dynamic>? data, int? id}) async {
+  void _showLocalNotification(
+    String title,
+    String body, {
+    Map<String, dynamic>? data,
+    int? id,
+  }) async {
     if (!_localNotificationsReady) return;
 
     // DIAGNOSTIC: log the payload keys for message notifications so we
@@ -859,23 +992,36 @@ class NotificationService {
     // for Firestore-listener-originated ones (which always build both
     // keys explicitly). Safe to remove once confirmed.
     if (data != null) {
-      debugPrint("NotificationService: showing local notification with payload keys: ${data.keys.toList()}");
+      debugPrint(
+        "NotificationService: showing local notification with payload keys: ${data.keys.toList()}",
+      );
     }
 
     const androidDetails = AndroidNotificationDetails(
-        'conexus_channel_id', 'Conexus Messages',
-        importance: Importance.max, priority: Priority.high,
-        actions: [AndroidNotificationAction('reply_action', 'Reply', inputs: [AndroidNotificationActionInput(label: 'Type your message...')])]
+      'conexus_channel_id',
+      'Conexus Messages',
+      importance: Importance.max,
+      priority: Priority.high,
+      actions: [
+        AndroidNotificationAction(
+          'reply_action',
+          'Reply',
+          inputs: [
+            AndroidNotificationActionInput(label: 'Type your message...'),
+          ],
+        ),
+      ],
     );
     const iosDetails = DarwinNotificationDetails(
       categoryIdentifier: _iosMessageCategoryId,
     );
     try {
       await _localNotificationsPlugin.show(
-          id ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000),
-          title, body,
-          const NotificationDetails(android: androidDetails, iOS: iosDetails),
-          payload: data != null ? jsonEncode(data) : null
+        id ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000),
+        title,
+        body,
+        const NotificationDetails(android: androidDetails, iOS: iosDetails),
+        payload: data != null ? jsonEncode(data) : null,
       );
     } catch (e) {
       debugPrint("Error showing local notification: $e");
@@ -887,18 +1033,25 @@ class NotificationService {
     required String callerId,
     required String callerName,
     required String callerImage,
-    required bool isVideo
+    required bool isVideo,
   }) async {
     if (!_localNotificationsReady) return;
 
     final androidDetails = AndroidNotificationDetails(
-        'conexus_call_channel_id', 'Conexus Calls',
-        importance: Importance.max, priority: Priority.high,
-        fullScreenIntent: true, category: AndroidNotificationCategory.call,
-        actions: [
-          const AndroidNotificationAction('accept_call_action', 'Accept', showsUserInterface: true),
-          const AndroidNotificationAction('decline_call_action', 'Decline')
-        ]
+      'conexus_call_channel_id',
+      'Conexus Calls',
+      importance: Importance.max,
+      priority: Priority.high,
+      fullScreenIntent: true,
+      category: AndroidNotificationCategory.call,
+      actions: [
+        const AndroidNotificationAction(
+          'accept_call_action',
+          'Accept',
+          showsUserInterface: true,
+        ),
+        const AndroidNotificationAction('decline_call_action', 'Decline'),
+      ],
     );
     const iosDetails = DarwinNotificationDetails(
       categoryIdentifier: _iosCallCategoryId,
@@ -906,13 +1059,18 @@ class NotificationService {
     );
     try {
       await _localNotificationsPlugin.show(
-          callId.hashCode, isVideo ? "Incoming Video Call" : "Incoming Voice Call",
-          "$callerName is calling...",
-          NotificationDetails(android: androidDetails, iOS: iosDetails),
-          payload: jsonEncode({
-            'callId': callId, 'callerId': callerId, 'callerName': callerName,
-            'callerImage': callerImage, 'isVideo': isVideo, 'type': 'call'
-          })
+        callId.hashCode,
+        isVideo ? "Incoming Video Call" : "Incoming Voice Call",
+        "$callerName is calling...",
+        NotificationDetails(android: androidDetails, iOS: iosDetails),
+        payload: jsonEncode({
+          'callId': callId,
+          'callerId': callerId,
+          'callerName': callerName,
+          'callerImage': callerImage,
+          'isVideo': isVideo,
+          'type': 'call',
+        }),
       );
     } catch (e) {
       debugPrint("Error showing call notification: $e");
@@ -945,8 +1103,10 @@ Future<void> notificationTapBackground(NotificationResponse response) async {
   // prints when you tap Reply/Decline, the background isolate isn't being
   // dispatched at all (check that `initialize()` — which registers this
   // callback — has run at least once since the app was installed).
-  debugPrint("notificationTapBackground: fired, actionId=${response.actionId}, "
-      "hasInput=${response.input != null}, payload=${response.payload}");
+  debugPrint(
+    "notificationTapBackground: fired, actionId=${response.actionId}, "
+    "hasInput=${response.input != null}, payload=${response.payload}",
+  );
 
   WidgetsFlutterBinding.ensureInitialized();
   try {
@@ -970,7 +1130,9 @@ Future<void> notificationTapBackground(NotificationResponse response) async {
   // the user's side, with zero indication why. Bail out explicitly and
   // loudly instead.
   if (Firebase.apps.isEmpty) {
-    debugPrint("Background notification tap: no Firebase app available, aborting");
+    debugPrint(
+      "Background notification tap: no Firebase app available, aborting",
+    );
     return;
   }
 
@@ -991,7 +1153,9 @@ Future<void> notificationTapBackground(NotificationResponse response) async {
   if (response.actionId == 'decline_call_action') {
     final callId = data['callId']?.toString();
     if (callId == null || callId.isEmpty) {
-      debugPrint("Background decline: missing callId in payload, dropping. payload keys were: ${data.keys.toList()}");
+      debugPrint(
+        "Background decline: missing callId in payload, dropping. payload keys were: ${data.keys.toList()}",
+      );
       return;
     }
 
@@ -1006,7 +1170,9 @@ Future<void> notificationTapBackground(NotificationResponse response) async {
     // exactly like "decline does nothing."
     String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) {
-      debugPrint("Background decline: no current user yet, waiting on authStateChanges()");
+      debugPrint(
+        "Background decline: no current user yet, waiting on authStateChanges()",
+      );
       try {
         currentUserId = await FirebaseAuth.instance
             .authStateChanges()
@@ -1018,15 +1184,16 @@ Future<void> notificationTapBackground(NotificationResponse response) async {
       }
     }
     if (currentUserId == null) {
-      debugPrint("Background decline: no authenticated user, dropping decline for call $callId");
+      debugPrint(
+        "Background decline: no authenticated user, dropping decline for call $callId",
+      );
       return;
     }
 
     try {
-      await FirebaseFirestore.instance
-          .collection('calls')
-          .doc(callId)
-          .update({'status': 'declined'});
+      await FirebaseFirestore.instance.collection('calls').doc(callId).update({
+        'status': 'declined',
+      });
       debugPrint("Background decline: call $callId declined successfully");
     } catch (e) {
       debugPrint("Background decline failed for call $callId: $e");
@@ -1061,8 +1228,10 @@ Future<void> notificationTapBackground(NotificationResponse response) async {
       // chatId or senderId. Check the printed keys against what your
       // backend actually sends and add the real key name to
       // _chatIdKeys/_senderIdKeys near the top of this file.
-      debugPrint("Background reply: missing chatId/senderId in payload (checked $_chatIdKeys / "
-          "$_senderIdKeys), dropping reply. payload keys were: ${data.keys.toList()}");
+      debugPrint(
+        "Background reply: missing chatId/senderId in payload (checked $_chatIdKeys / "
+        "$_senderIdKeys), dropping reply. payload keys were: ${data.keys.toList()}",
+      );
       return;
     }
 
@@ -1071,7 +1240,9 @@ Future<void> notificationTapBackground(NotificationResponse response) async {
     // short window rather than dropping the reply outright.
     String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) {
-      debugPrint("Background reply: no current user yet, waiting on authStateChanges()");
+      debugPrint(
+        "Background reply: no current user yet, waiting on authStateChanges()",
+      );
       try {
         currentUserId = await FirebaseAuth.instance
             .authStateChanges()
@@ -1094,22 +1265,25 @@ Future<void> notificationTapBackground(NotificationResponse response) async {
           .doc(chatId)
           .collection('messages')
           .add({
-        'text': input,
-        'imageUrl': '',
-        'type': 'text',
-        'status': 'sent',
-        'isEdited': false,
-        'senderId': currentUserId,
-        'receiverId': receiverId,
-        'time': now,
-        'reactions': {},
-      });
-      await FirebaseFirestore.instance.collection('chat_rooms').doc(chatId).set({
-        'lastMessage': input,
-        'lastMessageSenderId': currentUserId,
-        'lastMessageTime': now,
-        'unreadCount.$receiverId': FieldValue.increment(1),
-      }, SetOptions(merge: true));
+            'text': input,
+            'imageUrl': '',
+            'type': 'text',
+            'status': 'sent',
+            'isEdited': false,
+            'senderId': currentUserId,
+            'receiverId': receiverId,
+            'time': now,
+            'reactions': {},
+          });
+      await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(chatId)
+          .set({
+            'lastMessage': input,
+            'lastMessageSenderId': currentUserId,
+            'lastMessageTime': now,
+            'unreadCount.$receiverId': FieldValue.increment(1),
+          }, SetOptions(merge: true));
       debugPrint("Background reply: sent successfully to chat $chatId");
     } catch (e) {
       debugPrint("Background reply failed: $e");
@@ -1135,7 +1309,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     return;
   }
 
-  debugPrint("NotificationService: Handling background message: ${message.messageId}");
+  debugPrint(
+    "NotificationService: Handling background message: ${message.messageId}",
+  );
 
   final data = message.data;
   final type = data['type'];
@@ -1144,12 +1320,17 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     final callId = data['callId']?.toString() ?? '';
     final status = data['status']?.toString();
     if (callId.isEmpty) return;
-    if (status == 'cancelled' || status == 'declined' || status == 'ended' || status == 'connected') {
+    if (status == 'cancelled' ||
+        status == 'declined' ||
+        status == 'ended' ||
+        status == 'connected') {
       try {
         final plugin = FlutterLocalNotificationsPlugin();
         await plugin.cancel(callId.hashCode);
       } catch (e) {
-        debugPrint("Background handler: failed to cancel stale call notification: $e");
+        debugPrint(
+          "Background handler: failed to cancel stale call notification: $e",
+        );
       }
     }
     return;
@@ -1160,7 +1341,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final plugin = FlutterLocalNotificationsPlugin();
 
   try {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     final iosSettings = DarwinInitializationSettings(
       notificationCategories: [
         DarwinNotificationCategory(
@@ -1177,9 +1360,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
               options: {DarwinNotificationActionOption.destructive},
             ),
           ],
-          options: {
-            DarwinNotificationCategoryOption.customDismissAction,
-          },
+          options: {DarwinNotificationCategoryOption.customDismissAction},
         ),
       ],
     );
@@ -1203,15 +1384,19 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     );
 
     final androidImplementation = plugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-    await androidImplementation?.createNotificationChannel(const AndroidNotificationChannel(
-      'conexus_call_channel_id',
-      'Conexus Calls',
-      description: 'Notifications for incoming calls',
-      importance: Importance.max,
-      playSound: true,
-      enableVibration: true,
-    ));
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    await androidImplementation?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'conexus_call_channel_id',
+        'Conexus Calls',
+        description: 'Notifications for incoming calls',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+      ),
+    );
 
     final callId = data['callId']?.toString() ?? '';
     final callerId = data['callerId']?.toString() ?? '';
@@ -1222,11 +1407,18 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     if (callId.isEmpty) return;
 
     final androidDetails = AndroidNotificationDetails(
-      'conexus_call_channel_id', 'Conexus Calls',
-      importance: Importance.max, priority: Priority.high,
-      fullScreenIntent: true, category: AndroidNotificationCategory.call,
+      'conexus_call_channel_id',
+      'Conexus Calls',
+      importance: Importance.max,
+      priority: Priority.high,
+      fullScreenIntent: true,
+      category: AndroidNotificationCategory.call,
       actions: [
-        const AndroidNotificationAction('accept_call_action', 'Accept', showsUserInterface: true),
+        const AndroidNotificationAction(
+          'accept_call_action',
+          'Accept',
+          showsUserInterface: true,
+        ),
         const AndroidNotificationAction('decline_call_action', 'Decline'),
       ],
     );
@@ -1241,8 +1433,12 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       "$callerName is calling...",
       NotificationDetails(android: androidDetails, iOS: iosDetails),
       payload: jsonEncode({
-        'callId': callId, 'callerId': callerId, 'callerName': callerName,
-        'callerImage': callerImage, 'isVideo': isVideo, 'type': 'call',
+        'callId': callId,
+        'callerId': callerId,
+        'callerName': callerName,
+        'callerImage': callerImage,
+        'isVideo': isVideo,
+        'type': 'call',
       }),
     );
   } catch (e, stackTrace) {

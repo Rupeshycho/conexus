@@ -60,6 +60,6 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
   assets:
-     - assets/images/profile_pic.png
-     - assets/Sounds/
-     - assets/images/Conexus.logo.png
+    - assets/images/profile_pic.png
+    - assets/Sounds/
+    - assets/images/Conexus.logo.png
