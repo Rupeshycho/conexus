@@ -1,10 +1,11 @@
+import 'package:conexus/view/blocked_users_screen.dart';
 import 'package:conexus/view/change_password_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:conexus/services/settings_service.dart';
 import 'package:conexus/view/login_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:conexus/view/personal_info_screen.dart';
-import 'package:conexus/services/app_settings_provider.dart';
+import 'package:conexus/viewmodel/theme_view_model.dart';
 import 'package:conexus/view/about_us_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -18,7 +19,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final SettingsService _settingsService = SettingsService();
 
   bool publicProfile = true;
-  bool darkMode = false;
   String selectedLanguage = "English (US)";
   bool isLoading = true;
 
@@ -32,12 +32,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final profile = await _settingsService.getPublicProfile();
-    final dark = await _settingsService.getDarkMode();
     final lang = await _settingsService.getLanguage();
     if (!mounted) return;
     setState(() {
       publicProfile = profile;
-      darkMode = dark;
       selectedLanguage = lang;
       isLoading = false;
     });
@@ -50,6 +48,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
+
+    // Watching ThemeViewModel here means this screen rebuilds automatically
+    // whenever the theme changes — whether toggled from here or elsewhere.
+    final isDark = context.watch<ThemeViewModel>().isDarkMode;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -84,9 +86,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 _divider(),
                 _settingTile(
-                  icon: Icons.visibility_outlined,
-                  title: "Public Profile",
-                  subtitle: "Allow others to see your feed",
+                  icon: publicProfile ? Icons.public : Icons.lock_person_outlined,
+                  title: publicProfile ? "Public Profile" : "Private Profile",
+                  subtitle: publicProfile
+                      ? "Anyone can see your posts and follow you"
+                      : "Only approved followers can see your posts",
                   trailing: Switch(
                     value: publicProfile,
                     activeColor: Colors.white,
@@ -106,22 +110,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: Icons.block,
                   title: "Blocked Users",
                   onTap: () {
-                    // TODO: Navigate to Blocked Users screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const BlockedUsersScreen()),
+                    );
                   },
                 ),
                 _divider(),
                 _settingTile(
-                  icon: Icons.dark_mode_outlined,
-                  title: "Dark Mode",
-                  trailing: Switch(
-                    value: darkMode,
-                    activeColor: Colors.white,
-                    activeTrackColor: orange,
-                    onChanged: (val) async {
-                      setState(() => darkMode = val);
-                      await context.read<AppSettingsProvider>().setDarkMode(val);
-                    },
+                  icon: isDark ? Icons.dark_mode : Icons.dark_mode_outlined,
+                  title: isDark ? "Dark Mode" : "Light Mode",
+                  subtitle: "Tap the icon to switch",
+                  trailing: IconButton(
+                    onPressed: () => context.read<ThemeViewModel>().toggleTheme(),
+                    icon: Icon(
+                      isDark ? Icons.dark_mode : Icons.light_mode,
+                      color: orange,
+                    ),
+                    tooltip: isDark ? "Switch to light mode" : "Switch to dark mode",
                   ),
+                  onTap: () => context.read<ThemeViewModel>().toggleTheme(),
                 ),
               ]),
               const SizedBox(height: 24),
@@ -246,10 +254,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               trailing: lang == selectedLanguage
                   ? const Icon(Icons.check, color: orange)
                   : null,
-              onTap: () {
+              onTap: () async {
                 setState(() => selectedLanguage = lang);
-                context.read<AppSettingsProvider>().setLanguage(lang);
-                Navigator.pop(context);
+                await _settingsService.setLanguage(lang);
+                if (context.mounted) Navigator.pop(context);
               },
             ))
                 .toList(),
