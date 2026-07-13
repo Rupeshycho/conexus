@@ -41,7 +41,9 @@ class _VideoPostPlayerState extends State<VideoPostPlayer> {
     return GestureDetector(
       onTap: () {
         setState(() {
-          _controller.value.isPlaying ? _controller.pause() : _controller.play();
+          _controller.value.isPlaying
+              ? _controller.pause()
+              : _controller.play();
         });
       },
       child: AspectRatio(
@@ -51,7 +53,11 @@ class _VideoPostPlayerState extends State<VideoPostPlayer> {
           children: [
             VideoPlayer(_controller),
             if (!_controller.value.isPlaying)
-              const Icon(Icons.play_circle_fill, color: Colors.white70, size: 56),
+              const Icon(
+                Icons.play_circle_fill,
+                color: Colors.white70,
+                size: 56,
+              ),
           ],
         ),
       ),
