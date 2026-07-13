@@ -10,10 +10,9 @@ class PostModel {
   final PostType type;
   final String? mediaUrl;
   final String caption;
-  final int likeCount;
   final int commentCount;
   final DateTime createdAt;
-  final bool isLiked;
+  final List<String> likedBy;
   final bool isSaved;
 
   PostModel({
@@ -24,12 +23,15 @@ class PostModel {
     required this.type,
     this.mediaUrl,
     this.caption = '',
-    this.likeCount = 0,
     this.commentCount = 0,
     required this.createdAt,
-    this.isLiked = false,
+    this.likedBy = const [],
     this.isSaved = false,
   });
+
+  int get likeCount => likedBy.length;
+
+  bool isLikedBy(String userId) => likedBy.contains(userId);
 
   factory PostModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -39,15 +41,14 @@ class PostModel {
       authorUsername: data['authorUsername'] ?? '',
       authorPhotoUrl: data['authorPhotoUrl'] ?? '',
       type: PostType.values.firstWhere(
-            (e) => e.toString() == data['type'],
+        (e) => e.toString() == data['type'],
         orElse: () => PostType.text,
       ),
       mediaUrl: data['mediaUrl'],
       caption: data['caption'] ?? '',
-      likeCount: data['likeCount'] ?? 0,
       commentCount: data['commentCount'] ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      isLiked: data['isLiked'] ?? false,
+      likedBy: List<String>.from(data['likedBy'] ?? []),
       isSaved: data['isSaved'] ?? false,
     );
   }
@@ -60,9 +61,9 @@ class PostModel {
       'type': type.toString(),
       'mediaUrl': mediaUrl,
       'caption': caption,
-      'likeCount': likeCount,
       'commentCount': commentCount,
       'createdAt': Timestamp.fromDate(createdAt),
+      'likedBy': likedBy,
     };
   }
 
@@ -74,10 +75,9 @@ class PostModel {
     PostType? type,
     String? mediaUrl,
     String? caption,
-    int? likeCount,
     int? commentCount,
     DateTime? createdAt,
-    bool? isLiked,
+    List<String>? likedBy,
     bool? isSaved,
   }) {
     return PostModel(
@@ -88,10 +88,9 @@ class PostModel {
       type: type ?? this.type,
       mediaUrl: mediaUrl ?? this.mediaUrl,
       caption: caption ?? this.caption,
-      likeCount: likeCount ?? this.likeCount,
       commentCount: commentCount ?? this.commentCount,
       createdAt: createdAt ?? this.createdAt,
-      isLiked: isLiked ?? this.isLiked,
+      likedBy: likedBy ?? this.likedBy,
       isSaved: isSaved ?? this.isSaved,
     );
   }
