@@ -1,70 +1,140 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel {
-  final String uid;
+  final String id;
+  final String name;
   final String username;
-  final String email;
-  final String photoUrl;
   final String bio;
-  final DateTime? createdAt;
+  final String contact;
+  final String email;
+  final String profileImage;
+  final String aboutMe;
+  final String fcmToken;
   final bool isOnline;
-  final DateTime? lastSeen;
+  final List<String> followers;
+  final List<String> following;
+  final List<String> blockedUsers;
+  final Timestamp? createdAt;
+  final Timestamp? lastSeen;
 
   UserModel({
-    required this.uid,
-    required this.username,
-    required this.email,
-    this.photoUrl = '',
+    required this.id,
+    required this.name,
+    this.username = '',
     this.bio = '',
+    this.contact = '',
+    this.email = '',
+    this.profileImage = '',
+    this.aboutMe = 'Hey there! I am using Conexus.',
+    this.fcmToken = '',
+    this.isOnline = true,
+    this.followers = const [],
+    this.following = const [],
+    this.blockedUsers = const [],
     this.createdAt,
-    this.isOnline = false,
     this.lastSeen,
   });
 
-  factory UserModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  /// Alias for [id] — kept for any call sites still using the older
+  /// `uid`-named field from before the merge.
+  String get uid => id;
+
+  factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
-      uid: doc.id,
-      username: data['username'] ?? '',
-      email: data['email'] ?? '',
-      photoUrl: data['photoUrl'] ?? '',
-      bio: data['bio'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      isOnline: data['isOnline'] ?? false,
-      lastSeen: (data['lastSeen'] as Timestamp?)?.toDate(),
+      id: map['id'] as String? ?? map['uid'] as String? ?? '',
+      name: map['name'] as String? ?? '',
+      username: map['username'] as String? ?? '',
+      bio: map['bio'] as String? ?? '',
+      contact: map['contact'] as String? ?? '',
+      email: map['email'] as String? ?? '',
+      profileImage: map['profileImage'] as String? ?? '',
+      aboutMe: map['aboutMe'] as String? ?? 'Hey there! I am using Conexus.',
+      fcmToken: map['fcmToken'] as String? ?? '',
+      isOnline: map['isOnline'] as bool? ?? false,
+      followers: List<String>.from(map['followers'] ?? []),
+      following: List<String>.from(map['following'] ?? []),
+      blockedUsers: List<String>.from(map['blockedUsers'] ?? []),
+      createdAt: map['createdAt'] as Timestamp?,
+      lastSeen: map['lastSeen'] as Timestamp?,
+    );
+  }
+
+  /// Convenience constructor for building directly off a Firestore
+  /// DocumentSnapshot — uses the doc id as the user id so callers don't
+  /// have to remember to stuff `id` into the stored document data too.
+  factory UserModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    return UserModel(
+      id: doc.id,
+      name: data['name'] as String? ?? '',
+      username: data['username'] as String? ?? '',
+      bio: data['bio'] as String? ?? '',
+      contact: data['contact'] as String? ?? '',
+      email: data['email'] as String? ?? '',
+      profileImage: data['profileImage'] as String? ?? '',
+      aboutMe: data['aboutMe'] as String? ?? 'Hey there! I am using Conexus.',
+      fcmToken: data['fcmToken'] as String? ?? '',
+      isOnline: data['isOnline'] as bool? ?? false,
+      followers: List<String>.from(data['followers'] ?? []),
+      following: List<String>.from(data['following'] ?? []),
+      blockedUsers: List<String>.from(data['blockedUsers'] ?? []),
+      createdAt: data['createdAt'] as Timestamp?,
+      lastSeen: data['lastSeen'] as Timestamp?,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'username': username.toLowerCase(),
-      'email': email,
-      'photoUrl': photoUrl,
+      'id': id,
+      'name': name,
+      'username': username,
       'bio': bio,
-      'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
+      'contact': contact,
+      'email': email,
+      'profileImage': profileImage,
+      'aboutMe': aboutMe,
+      'fcmToken': fcmToken,
       'isOnline': isOnline,
-      'lastSeen': lastSeen != null ? Timestamp.fromDate(lastSeen!) : null,
+      'followers': followers,
+      'following': following,
+      'blockedUsers': blockedUsers,
+      'createdAt': createdAt ?? FieldValue.serverTimestamp(),
+      'lastSeen': lastSeen ?? FieldValue.serverTimestamp(),
     };
   }
 
   UserModel copyWith({
-    String? uid,
+    String? id,
+    String? name,
     String? username,
-    String? email,
-    String? photoUrl,
     String? bio,
-    DateTime? createdAt,
+    String? contact,
+    String? email,
+    String? profileImage,
+    String? aboutMe,
+    String? fcmToken,
     bool? isOnline,
-    DateTime? lastSeen,
+    List<String>? followers,
+    List<String>? following,
+    List<String>? blockedUsers,
+    Timestamp? createdAt,
+    Timestamp? lastSeen,
   }) {
     return UserModel(
-      uid: uid ?? this.uid,
+      id: id ?? this.id,
+      name: name ?? this.name,
       username: username ?? this.username,
-      email: email ?? this.email,
-      photoUrl: photoUrl ?? this.photoUrl,
       bio: bio ?? this.bio,
-      createdAt: createdAt ?? this.createdAt,
+      contact: contact ?? this.contact,
+      email: email ?? this.email,
+      profileImage: profileImage ?? this.profileImage,
+      aboutMe: aboutMe ?? this.aboutMe,
+      fcmToken: fcmToken ?? this.fcmToken,
       isOnline: isOnline ?? this.isOnline,
+      followers: followers ?? this.followers,
+      following: following ?? this.following,
+      blockedUsers: blockedUsers ?? this.blockedUsers,
+      createdAt: createdAt ?? this.createdAt,
       lastSeen: lastSeen ?? this.lastSeen,
     );
   }
