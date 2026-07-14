@@ -1,6 +1,11 @@
 {
+<<<<<<< HEAD
     "name": "group_project",
     "short_name": "group_project",
+=======
+    "name": "conexus",
+    "short_name": "conexus",
+>>>>>>> ujwal
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
