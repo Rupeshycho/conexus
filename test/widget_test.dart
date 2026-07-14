@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -69,7 +68,7 @@ void main() {
         // whatever Timer it's holding, before flutter_test's end-of-test
         // check for pending timers runs.
         await tester.pumpWidget(const SizedBox.shrink());
-      });
+      })
 
   // Testing the signed-in branch (MessageFrame) needs a real `User`
   // instance, and hand-implementing FirebaseAuth's User interface is a
@@ -120,5 +119,5 @@ void main() {
     expect(find.text('0'), findsNothing);
     expect(find.text('1'), findsOneWidget);
   });
->>>>>>> ecadcca50febd05694be90f13c9744d04b982bb5
+
 }
